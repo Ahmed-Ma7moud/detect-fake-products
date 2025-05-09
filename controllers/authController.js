@@ -81,7 +81,7 @@ exports.login = async (req, res) => {
     }
     
     // Find user and select password field
-    const user = await User.findOne({ email }).select('+password');
+    const user = await User.findOne({ email });
     
     // Check if user exists
     if (!user) {
@@ -91,8 +91,8 @@ exports.login = async (req, res) => {
       });
     }
     // If user login with social accounts only 
-    if (!user.providers.includes('local')) {
-      return res.status(400).json({ message: "This account is linked to Google login only." });
+    if (user.providers == "google") {
+      return res.status(400).json({ message: "Login with Google" });
     }
     
     // Check if account is locked
@@ -262,33 +262,49 @@ exports.googleCallback = async(req,res,next) => {
 
       // check if user is exist in traditional login or linked
       let user = await User.findOne({ email: decoded.email })  
-      if (user) {
-        // User exists - link Google if not already
-        if (!user.socialProfiles.google) {
-          user.socialProfiles.google = decoded.sub;
-          if (!user.providers.includes('google')) {
-            user.providers.push('google');
-          }
-          await user.save();
-        }
-      }else{
-        // New user signing up with Google
-        const {privateKey , address} =  generateEthAddress();
-        user = await User.create({
-          firstName: decoded.given_name,
-          lastName:decoded.family_name,
-          email: decoded.email,
-          picture: decoded.picture,
-          "socialProfiles.google": decoded.sub,
-          isEmailVerified:decoded.email_verified,
-          privateKey,
-          wallet_address: address,
-          providers: ['google']
+      if (user && user.providers == "google") {
+        // invalid all access token of this user
+        user.accessTokenVersion+=1;
+
+        // Generate tokens
+        const accessToken = user.generateAccessToken();
+        const refreshToken = user.generateRefreshToken();
+        
+        // Record successful login
+        user.addLoginAttempt(true, req.ip, req.headers['user-agent'] , "google");
+        await user.save({ validateBeforeSave: false });
+        // Set refresh token as an HTTP-only cookie
+        res.cookie('refreshToken', refreshToken, {
+          httpOnly: true,
+          secure: process.env.NODE_ENV === 'production',
+          maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+        });
+        
+        return res.status(200).json({
+          success: true,
+          accessToken
         });
       }
 
-    // invalid all access token of this user
-    user.accessTokenVersion+=1;
+      if (user && user.providers == "local")
+        return res.status(400).json({
+          success: false,
+          msg : "Please login with your Email and Password "
+        });
+
+      // New user signing up with Google
+      const {privateKey , address} =  await generateEthAddress();
+      user = await User.create({
+        firstName: decoded.given_name,
+        lastName:decoded.family_name,
+        email: decoded.email,
+        picture: decoded.picture,
+        googleID: decoded.sub,
+        isEmailVerified:decoded.email_verified,
+        privateKey,
+        wallet_address: address,
+        providers: 'google'
+      });
 
     // Generate tokens
     const accessToken = user.generateAccessToken();
@@ -296,7 +312,7 @@ exports.googleCallback = async(req,res,next) => {
     
     // Record successful login
     user.addLoginAttempt(true, req.ip, req.headers['user-agent'] , "google");
-    await user.save({ validateBeforeSave: false });
+    await user.save();
     // Set refresh token as an HTTP-only cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -388,30 +404,6 @@ exports.refreshToken = async (req, res) => {
     res.status(200).json({
       success: true,
       accessToken
-    });
-  } catch (error) {
-    res.status(500).json({
-      success: false,
-      message: error.message
-    });
-  }
-};
-
-// Get current user
-exports.getMe = async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id);
-    
-    if (!user) {
-      return res.status(404).json({
-        success: false,
-        message: 'User not found'
-      });
-    }
-    
-    res.status(200).json({
-      success: true,
-      data: user
     });
   } catch (error) {
     res.status(500).json({
@@ -577,7 +569,7 @@ exports.forgotPassword = async (req, res) => {
     if (!email) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide your email'
+        message: 'Please provide valid email'
       });
     }
     
@@ -587,6 +579,12 @@ exports.forgotPassword = async (req, res) => {
       return res.status(404).json({
         success: false,
         message: 'No user found with this email'
+      });
+    }
+    if (user && user.providers == "google") {
+      return res.status(404).json({
+        success: false,
+        message: 'Please login with google'
       });
     }
     
