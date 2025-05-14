@@ -9,16 +9,13 @@ exports.registerProduct = async (data) => {
         manufacturerLocation,
         serialNumber,
         batchNumber,
-        productName
+        productName,
+        tradeName
       } = data || {};
-  
+
       // Validate required fields
-      if (!manufacturerAddress || !manufacturerLocation || !serialNumber || !batchNumber || !productName) {
-        const errorMsg = "Missing required product data fields.";
-        if (res && typeof res.status === 'function')
-          return res.status(400).json({ message: errorMsg });
-        else
-          throw new Error(errorMsg);
+      if (!manufacturerAddress || !manufacturerLocation || !serialNumber || !batchNumber || !productName || !tradeName) {
+          throw new Error("Missing required product data fields.");
       }
   
       // Send transaction to smart contract
@@ -27,7 +24,8 @@ exports.registerProduct = async (data) => {
         manufacturerLocation,
         serialNumber,
         batchNumber,
-        productName
+        productName,
+        tradeName
       );
   
       console.log("Transaction sent:", tx);
@@ -69,14 +67,18 @@ exports.transferOwnership = async (data) => {
     const {previousOwnerAddress,
     newOwnerAddress,
     newLocation,
-    productSerialNumber
+    productSerialNumber,
+    tradeName,
+    role
     } = data;
     try {
       const tx = await contract.transferOwnership(
         previousOwnerAddress,
         newOwnerAddress,
         newLocation,
-        productSerialNumber
+        productSerialNumber,
+        tradeName,
+        role
       );
   
       const receipt = await tx.wait();
@@ -104,36 +106,33 @@ exports.transferOwnership = async (data) => {
     }
 };
 exports.getProductHistory = async (req, res, next) => {
-    try {
-        const { serialNumber } = req.params; // Get serialNumber from request params
-        const history = await contract.getProductHistory(serialNumber);
-        let arrOfHistoryObj = [];
-        let tempObj = {};
-        for(let i = 0 ; i < history.length ; i++){
-          tempObj = {
-            owner : history[i][0],
-            location : history[i][1],
-            time : history[i][2]
-          }
-          arrOfHistoryObj.push(tempObj)
-        }
-        res.json({ success: true, history : arrOfHistoryObj});
+  try {
+    const { serialNumber } = req.params;
+    // Validate product exists
+    const history = await contract.getProductHistory(serialNumber);
+    const arrOfHistoryObj = history.map(([owner, location, timestamp, tradeName, role]) => ({
+      owner,
+      location,
+      time: new Date(parseInt(timestamp) * 1000).toLocaleString(),
+      tradeName,
+      role,
+    }));
 
-    } catch (error) {
-      console.log("failed to get product history from blockchain:", error);
-  
-      let message = "failed to get product history from blockchain";
-      
-      if (error?.info?.error?.message) {
-        message = error.info.error.message;
-      } else if (error?.reason) {
-        message = error.reason;
-      } else if (error?.message) {
-        message = error.message;
-      }
-  
-      return res.status(500).json({success : false , msg : message})
+    res.json({ success: true, history: arrOfHistoryObj });
+  } catch (error) {
+    console.error("Failed to get product history:", error);
+
+    let message = "Failed to get product history from blockchain";
+    if (error?.info?.error?.message) {
+      message = error.info.error.message;
+    } else if (error?.reason) {
+      message = error.reason;
+    } else if (error?.message) {
+      message = error.message;
     }
+
+    return res.status(500).json({ success: false, msg: message });
+  }
 };
 
 exports.getProductStatus = async (req, res, next) => {
@@ -142,10 +141,13 @@ exports.getProductStatus = async (req, res, next) => {
         //receive the last location of the product
         // product will be array of 1
         const product = await contract.getProduct(serialNumber);
+        console.log(product)
         const productObj = {
           owner : product[0] , 
           location : product[1] , 
           time : new Date(parseInt(product[2]) * 1000).toLocaleString(), 
+          tradeName : product[3],
+          role : product[4],
         }
       res.json({ success: true, product : productObj});
     } catch (error) {

@@ -44,6 +44,9 @@ const userSchema = new mongoose.Schema({
     enum: ['user', 'admin', 'manufacturer' , 'supplier', 'pharmacy'],
     default: 'user'
   },
+  tradeName : {
+    type : String
+  },
   picture: {
     type: String,
     default: '/uploads/images/avatar.png'
@@ -249,10 +252,11 @@ userSchema.methods.generateAccessToken = function() {
       email: this.email,
       address:this.wallet_address,
       location : this.location,
-      version: this.accessTokenVersion 
+      tradeName : this.tradeName,
+      version: this.accessTokenVersion
     }, 
     process.env.JWT_SECRET, 
-    { expiresIn: process.env.JWT_EXPIRE || '1h' }
+    { expiresIn: process.env.JWT_EXPIRE || '10h' } //you can custom it
   );
 };
 

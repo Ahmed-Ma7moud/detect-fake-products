@@ -12,7 +12,7 @@ const {generateEthAddress} = require('../utils/generateEtherAddress')
 // Register a new user
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, age , location} = req.body;
+    const { firstName, lastName, email, password, age , location, tradeName} = req.body;
     let user = await User.findOne({email})
     if(user)
       return res.status(400).json({msg:false,error:"User is Already exist"})
@@ -28,26 +28,27 @@ exports.register = async (req, res) => {
       age,
       location,
       privateKey,
-      wallet_address:address
+      wallet_address:address,
+      tradeName
     });
 
     // Generate verification token
     const verificationToken = user.generateEmailVerificationToken();
 
-    // Send verification email
-    const verificationURL = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
-    try{
-      await sendEmail({
-        email: user.email,
-        subject: 'Email Verification',
-        message: `Please verify your email by clicking: ${verificationURL}`
-      });
-    }catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
-    }
+// Send verification email
+    // const verificationURL = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
+    // try{
+    //   await sendEmail({
+    //     email: user.email,
+    //     subject: 'Email Verification',
+    //     message: `Please verify your email by clicking: ${verificationURL}`
+    //   });
+    // }catch (error) {
+    //   res.status(500).json({
+    //     success: false,
+    //     message: error.message
+    //   });
+    // }
     
 
     // save user in database after sending email and before assign payload (user._id)

@@ -5,24 +5,24 @@ const User = require('../models/User');
 const contractController = require("../controllers/contractController")
 exports.addProduct = async (req,res) => {
   try{
-    const {name , price , serial_number , batch_number} = req.body;
+    const {name , price , serial_number , batch_number , tradeName} = req.body;
 
     if(!name || !price || !serial_number || !batch_number)
       return res.status(400).json({success : false , msg : "missing Data"})
 
     // check uniqueness of serial number
-    const exist = await User.findOne({serial_number});
+    const exist = await Product.findOne({serial_number});
     if(exist)
       return res.status(400).json({success : false , msg : "duplicate serial number"})
 
     // get the manufucturer data
-    const user = await User.findById(req.user.id);
     const product_data = {
-      manufacturerAddress: user.wallet_address,
-      manufacturerLocation: user.location,
+      manufacturerAddress: req.user.address,
+      manufacturerLocation: req.user.location,
       serialNumber:serial_number,
       batchNumber:batch_number,
-      productName: name
+      productName: name,
+      tradeName : req.user.tradeName
     };
 
     const response = await contractController.registerProduct(product_data);
@@ -31,8 +31,8 @@ exports.addProduct = async (req,res) => {
       price , 
       serial_number , 
       batch_number,
-      owner:user.wallet_address,
-      location:user.location,
+      owner:req.user.address,
+      location:req.user.location,
       txHash:response.transactionHash,
       block_number:response.blockNumber
     })
@@ -119,6 +119,8 @@ exports.receiveBatch = async (req, res) => {
         newOwnerAddress: req.user.address,
         newLocation: req.user.location,
         productSerialNumber: product.serial_number,
+        tradeName:req.user.tradeName,
+        role : req.user.role
       };
     
       const response = await contractController.transferOwnership(data);
@@ -153,6 +155,8 @@ exports.buyProduct = async (req, res) => {
         newOwnerAddress: req.user.address,
         newLocation: req.user.location,
         productSerialNumber: product.serial_number,
+        tradeName : req.user.tradeName,
+        role : req.user.role
       };
     
       const response = await contractController.transferOwnership(data);

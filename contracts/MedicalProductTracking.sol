@@ -31,6 +31,8 @@ contract MedicalProductTracking {
         address currentOwner;
         string currentLocation;
         string timestamp;
+        string tradeName;
+        string role;
     }
 
     // Mapping from product serial number to product details
@@ -60,7 +62,8 @@ contract MedicalProductTracking {
         string calldata manufacturerLocation,
         string calldata productSerialNumber,
         string calldata productBatchNumber,
-        string calldata productName
+        string calldata productName,
+        string calldata tradeName
     ) public onlyContractOwner returns (bool) {
         if (manufacturerAddress == address(0)) {
             revert("Invalid manufacturer address");
@@ -82,6 +85,10 @@ contract MedicalProductTracking {
             revert("Invalid Product name");
         }
 
+        if (bytes(tradeName).length == 0) {
+            revert("Invalid trade name");
+        }
+
         if (bytes(productRegistry[productSerialNumber].timestamp).length != 0) {
             revert("duplicate SerialNumber");
         }
@@ -101,7 +108,9 @@ contract MedicalProductTracking {
             ProductStatus({
                 currentOwner: manufacturerAddress,
                 currentLocation: manufacturerLocation,
-                timestamp: currentTimestamp
+                timestamp: currentTimestamp,
+                tradeName: tradeName,
+                role: "manufacturer"
             })
         );
         emit ProductRegistered(
@@ -119,7 +128,9 @@ contract MedicalProductTracking {
         address previousOwnerAddress,
         address newOwnerAddress,
         string calldata newLocation,
-        string calldata productSerialNumber
+        string calldata productSerialNumber,
+        string calldata tradeName,
+        string calldata role
     ) public onlyContractOwner {
         //check input validation
         if (previousOwnerAddress == address(0)) {
@@ -142,6 +153,14 @@ contract MedicalProductTracking {
             revert("Invalid serial number");
         }
 
+        if (bytes(role).length == 0) {
+            revert("Invalid trade name");
+        }
+
+        if (bytes(tradeName).length == 0) {
+            revert("Invalid trade name");
+        }
+
         uint len = productHistory[productSerialNumber].length;
         ProductStatus memory product = productHistory[productSerialNumber][
             len - 1
@@ -161,6 +180,8 @@ contract MedicalProductTracking {
         product.currentOwner = newOwnerAddress;
         product.currentLocation = newLocation;
         product.timestamp = currentTimestamp;
+        product.role = role;
+        product.tradeName = tradeName;
         productHistory[productSerialNumber].push(product);
         emit ProductTransferred(
             previousOwnerAddress,
@@ -173,14 +194,11 @@ contract MedicalProductTracking {
     function getProductHistory(
         string calldata productSerialNumber
     ) public view returns (ProductStatus[] memory) {
-        require(
-            bytes(productSerialNumber).length > 0,
-            "serial number can not be empty"
-        );
-        require(
-            productHistory[productSerialNumber].length > 0,
-            "invalid serial number"
-        );
+        if (bytes(productSerialNumber).length == 0)
+            revert("serial number can not be empty");
+        if (productHistory[productSerialNumber].length == 0)
+            revert("invalid serial number");
+
         return productHistory[productSerialNumber];
     }
 
@@ -188,12 +206,10 @@ contract MedicalProductTracking {
     function getProduct(
         string calldata productSerialNumber
     ) public view returns (ProductStatus memory) {
-        require(
-            bytes(productSerialNumber).length > 0,
-            "serial number can not be empty"
-        );
+        if (bytes(productSerialNumber).length == 0)
+            revert("serial number can not be empty");
         uint len = productHistory[productSerialNumber].length;
-        require(len > 0, "invalid serial number");
+        if (len == 0) revert("invalid serial number");
         return productHistory[productSerialNumber][len - 1];
     }
 
@@ -202,10 +218,8 @@ contract MedicalProductTracking {
         address currentOwnerAddress,
         string calldata clientLocation
     ) public view returns (bool) {
-        require(
-            bytes(productSerialNumber).length > 0,
-            "serial number can not be empty"
-        );
+        if (bytes(productSerialNumber).length == 0)
+            revert("serial number can not be empty");
         uint len = productHistory[productSerialNumber].length;
         if (len == 0) return false;
         ProductStatus memory product = productHistory[productSerialNumber][
@@ -216,6 +230,7 @@ contract MedicalProductTracking {
             keccak256(bytes(clientLocation)) !=
             keccak256(bytes(product.currentLocation))
         ) return false;
+
         return true;
     }
 
