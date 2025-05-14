@@ -95,23 +95,6 @@ exports.receiveBatch = async (req, res) => {
     if (!products.length)
       return res.status(400).json({ success: false, msg: "No products found for this batch number" });
 
-// ganache can not handle nonce in parallel transactions
-
-    // await Promise.all(products.map(async (product) => {
-    //   const data = {
-    //     previousOwnerAddress: product.owner,
-    //     newOwnerAddress: req.user.address,
-    //     newLocation: req.user.location,
-    //     productSerialNumber: product.serial_number,
-    //   };
-    
-    //   const response = await contractController.transferOwnership(data);
-    
-    //   product.txHash = response.txhash;
-    //   product.owner = req.user.address;
-    //   product.location = req.user.location;
-    //   await product.save();
-    // }));    
 
     for (const product of products) {
       const data = {
@@ -190,46 +173,10 @@ exports.sellProduct = async function (req , res , next) {
     // change status of product to sold
     product.sold = true;
     await product.save();
-  
-    //create new order
-    // const order = await Order.create({
-    //   from : req.user.address,
-    //   location1 : req.user.location,
-    //   to : addressOfNewOwner,
-    //   location2 : newOwner.location,
-    //   name:product.name,
-    //   serial_number
-    // })
+
   
     res.status(201).json({success : true , product})
   }catch(error){
     res.status(500).json({success : false , msg : `server error : ${error.message}`})
   }
 }
-
-
-// // Delete product
-// exports.deleteProduct = async (req, res) => {
-//   try {
-//     const product = await Product.findOne({ id: req.params.id });
-
-//     if (!product) {
-//       return res.status(404).json({
-//         success: false,
-//         error: 'Product not found'
-//       });
-//     }
-
-//     await Product.findOneAndDelete({ id: req.params.id });
-
-//     res.status(200).json({
-//       success: true,
-//       data: {}
-//     });
-//   } catch (err) {
-//     res.status(500).json({
-//       success: false,
-//       error: 'Server Error'
-//     });
-//   }
-// };
