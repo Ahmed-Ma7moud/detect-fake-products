@@ -3,6 +3,7 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const connectDB = require("./config/DB")
 const cors = require("./middleware/cors")
+const rateLimiter = require ('./middleware/rateLimiter')
 const app = express();
 
 // Connect to MongoDB
@@ -12,7 +13,8 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser())
-app.use(cors.publicCors    )
+app.use(cors.publicCors)
+app.use(rateLimiter.apiLimiter)
 // session 
 const authMiddleware = require('./middleware/auth')
 // routes

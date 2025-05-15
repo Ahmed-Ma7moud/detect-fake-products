@@ -36,20 +36,20 @@ exports.register = async (req, res) => {
     // Generate verification token
     const verificationToken = user.generateEmailVerificationToken();
 
-// Send verification email
-    // const verificationURL = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
-    // try{
-    //   await sendEmail({
-    //     email: user.email,
-    //     subject: 'Email Verification',
-    //     message: `Please verify your email by clicking: ${verificationURL}`
-    //   });
-    // }catch (error) {
-    //   res.status(500).json({
-    //     success: false,
-    //     message: error.message
-    //   });
-    // }
+//Send verification email
+    const verificationURL = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
+    try{
+      await sendEmail({
+        email: user.email,
+        subject: 'Email Verification',
+        message: `Please verify your email by clicking: ${verificationURL}`
+      });
+    }catch (error) {
+      res.status(500).json({
+        success: false,
+        message: error.message
+      });
+    }
     
 
     // save user in database after sending email and before assign payload (user._id)
@@ -175,7 +175,8 @@ exports.login = async (req, res) => {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 30 * 24 * 60 * 60 * 1000 // 30 days
+      sameSite : "none",
+      maxAge: parseInt(process.env.REFRESH_TOKEN_EXP_DAYS || '30', 10) * 24 * 60 * 60 * 1000 // 30 days
     });
     
     res.status(200).json({
