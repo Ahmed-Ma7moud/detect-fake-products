@@ -12,7 +12,8 @@ connectDB();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser())
-app.use(cors.publicCors    )
+app.use(cors.publicCors)
+
 // session 
 const authMiddleware = require('./middleware/auth')
 // routes
@@ -31,18 +32,11 @@ app.get('/auth/google/callback', authMiddleware.googleSessions , googleCallback)
 
 
 app.use('/api/products', require('./routes/productRoutes'));
-app.use('/api/orders', require('./routes/orderRoutes'));
-// app.use('/api/suppliers', require('./routes/supplierRoutes'));
-app.use('/api/blockchain', require('./routes/contractRoutes'));
 
-
-// if (req,res,next ) => not found else if (error ,req,res,next ) => error handling 
-// not found resourse
 app.use((req, res, next) => {
   res.status(404).json({success : false , msg :'Sorry, the requested resource was not found.'});
 });
 
-// error handling 
 
 const PORT = parseInt(process.env.PORT,10) || 3000;
 

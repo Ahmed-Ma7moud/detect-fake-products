@@ -10,7 +10,9 @@ const {
   sellProduct,
   productHistory
 } = require('../controllers/productController');
+const rateLimiter = require("../middleware/rateLimiter")
 const authMiddleware = require("../middleware/auth")
+router.use(rateLimiter.apiLimiter)
 router.get("/history/:id" , productHistory)
 router.use(authMiddleware.authenticate)
 router.get("/",getProducts);

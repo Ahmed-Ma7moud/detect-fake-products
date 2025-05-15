@@ -1,8 +1,5 @@
 // controllers/productController.js
 const Product = require('../models/Product');
-const Order = require('../models/Order');
-const User = require('../models/User');
-const contractController = require("../controllers/contractController")
 const Tracking = require("../models/Tracking")
 
 exports.addProduct = async (req,res) => {

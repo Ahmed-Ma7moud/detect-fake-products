@@ -8,7 +8,7 @@ exports.apiSessions = session({
   resave:false,
   saveUninitialized:false,
   cookie:{
-    sameSite:"strict",
+    sameSite:"none",
     secure:process.env.NODE_ENV === 'production',
     httpOnly:true
   }
