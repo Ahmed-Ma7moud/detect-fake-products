@@ -5,6 +5,9 @@ const connectDB = require("./config/DB")
 const cors = require("./middleware/cors")
 const app = express();
 
+// trust proxy
+app.set('trust proxy', true);
+
 // Connect to MongoDB
 connectDB();
 
