@@ -37,7 +37,7 @@ exports.register = async (req, res) => {
     const verificationToken = user.generateEmailVerificationToken();
 
 //Send verification email
-const verificationURL = `${process.env.BASE_URL}/api/auth/verify-email/${token}`;
+const verificationURL = `${process.env.BASE_URL}/api/auth/verify-email/${verificationToken}`;
     try{
       await sendEmail({
         email: user.email,
@@ -62,6 +62,7 @@ const verificationURL = `${process.env.BASE_URL}/api/auth/verify-email/${token}`
       message: 'User registered successfully. Please verify your email.'
     });
   } catch (error) {
+    console.log(error)
     res.status(400).json({
       success: false,
       message: error.message
@@ -110,7 +111,6 @@ exports.login = async (req, res) => {
         user.accountLocked.status = false;
       }
     }
-    
     // Check if account is active
     if (!user.active) {
       return res.status(403).json({
@@ -131,7 +131,7 @@ exports.login = async (req, res) => {
         message: 'Invalid credentials'
       });
     }
-    
+
     // Check if 2FA is enabled and verify OTP if necessary
     if (user.twoFactorEnabled) {
       if (!otp) {
@@ -171,6 +171,7 @@ exports.login = async (req, res) => {
     // Record successful login
     user.addLoginAttempt(true, req.ip, req.headers['user-agent'] , "local");
     await user.save({ validateBeforeSave: false });
+
     // Set refresh token as an HTTP-only cookie
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,
@@ -184,6 +185,7 @@ exports.login = async (req, res) => {
       accessToken
     });
   } catch (error) {
+    console.log(error)
     res.status(500).json({
       success: false,
       message: error.message

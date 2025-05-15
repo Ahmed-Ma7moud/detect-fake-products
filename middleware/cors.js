@@ -11,7 +11,7 @@ const restrictedCors = cors({
 // Middleware for public routes
 const publicCors = cors({
     origin: '*',
-    credentials: true,
+    //methods: ['GET'],
     maxAge: 86400
 });
 

@@ -266,7 +266,7 @@ userSchema.methods.generateRefreshToken = function() {
   const refreshToken = crypto.randomBytes(40).toString('hex');
   
   // Set expiration to 30 days or whatever is configured
-  const expiresIn = ms(process.env.REFRESH_TOKEN_EXPIRE) || 30 * 24 * 60 * 60 * 1000; // 30 days
+  const expiresIn =  90 * 24 * 60 * 60 * 1000; // 90 days
   const expiresAt = new Date(Date.now() + expiresIn);
   // Store encrypted version of token
   const encryptedToken = crypto
