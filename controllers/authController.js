@@ -12,7 +12,7 @@ const {generateEthAddress} = require('../utils/generateEtherAddress')
 // Register a new user
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, age , location, tradeName} = req.body;
+    const { firstName, lastName, email, password, age , location, tradeName , role} = req.body;
     let user = await User.findOne({email})
     if(user)
       return res.status(400).json({msg:false,error:"User is Already exist"})
@@ -29,7 +29,8 @@ exports.register = async (req, res) => {
       location,
       privateKey,
       wallet_address:address,
-      tradeName
+      tradeName,
+      role
     });
 
     // Generate verification token

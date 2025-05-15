@@ -8,8 +8,10 @@ const {
   receiveBatch,
   buyProduct,
   sellProduct,
+  productHistory
 } = require('../controllers/productController');
 const authMiddleware = require("../middleware/auth")
+router.get("/history/:id" , productHistory)
 router.use(authMiddleware.authenticate)
 router.get("/",getProducts);
 router.get("/:id",getProduct); 

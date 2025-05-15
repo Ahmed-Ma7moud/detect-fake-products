@@ -27,23 +27,27 @@ const ProductSchema = new mongoose.Schema({
     default : "Unknown",
     required:true
   },
-  txHash: {
-    type: String,
-    unique: true
-  },
-  block_number : {
-    type : Number
-  },
   sold:{
     type : Boolean,
     default:false
   },
-  production_date :{
-    type : Date,
-    default : Date.now()
+  production_date: {
+    type: Date,
+    default: () => {
+      const now = new Date();
+      now.setHours(now.getHours() + 3); // +3 summer +2 winter
+      return now;
+    }
   },
   expiration_date: {
     type: Date,
+    required: true,
+    default: function () {
+      const prodDate = this.production_date || new Date();
+      const expiration = new Date(prodDate);
+      expiration.setFullYear(expiration.getFullYear() + 3);
+      return expiration;
+    }
   }
 });
 

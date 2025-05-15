@@ -3,9 +3,11 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const contractController = require("../controllers/contractController")
+const Tracking = require("../models/Tracking")
+
 exports.addProduct = async (req,res) => {
   try{
-    const {name , price , serial_number , batch_number , tradeName} = req.body;
+    const {name , price , serial_number , batch_number} = req.body;
 
     if(!name || !price || !serial_number || !batch_number)
       return res.status(400).json({success : false , msg : "missing Data"})
@@ -15,26 +17,23 @@ exports.addProduct = async (req,res) => {
     if(exist)
       return res.status(400).json({success : false , msg : "duplicate serial number"})
 
-    // get the manufucturer data
-    const product_data = {
-      manufacturerAddress: req.user.address,
-      manufacturerLocation: req.user.location,
-      serialNumber:serial_number,
-      batchNumber:batch_number,
-      productName: name,
-      tradeName : req.user.tradeName
-    };
-
-    const response = await contractController.registerProduct(product_data);
+//add product to database
     const product = await Product.create({
       name ,
       price , 
       serial_number , 
       batch_number,
       owner:req.user.address,
-      location:req.user.location,
-      txHash:response.transactionHash,
-      block_number:response.blockNumber
+      location:req.user.location
+    })
+    await Tracking.create({
+      serialNumber:serial_number,
+      history : [{
+        owner: req.user.address,
+        location: req.user.location,
+        tradeName : req.user.tradeName,
+        role : "manufacturer"
+      }]
     })
     res.status(201).json({success : true , product});
 
@@ -95,24 +94,22 @@ exports.receiveBatch = async (req, res) => {
     if (!products.length)
       return res.status(400).json({ success: false, msg: "No products found for this batch number" });
 
-
-    for (const product of products) {
-      const data = {
-        previousOwnerAddress: product.owner,
-        newOwnerAddress: req.user.address,
-        newLocation: req.user.location,
-        productSerialNumber: product.serial_number,
-        tradeName:req.user.tradeName,
+    const obj = {owner: req.user.address,
+        location: req.user.location,
+        tradeName : req.user.tradeName,
         role : req.user.role
-      };
-    
-      const response = await contractController.transferOwnership(data);
-    
-      product.txHash = response.txhash;
+    };
+    console.log(obj)
+
+    await Promise.all(products.map(async (product) => {
+      await Tracking.findOneAndUpdate({serialNumber : product.serial_number},
+        {$push:{history:obj}}
+      )
+      console.log("success")
       product.owner = req.user.address;
       product.location = req.user.location;
-      await product.save();
-    }
+      await product.save()
+    }));
     
     return res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
   } catch (error) {
@@ -133,21 +130,16 @@ exports.buyProduct = async (req, res) => {
     if (!product)
       return res.status(400).json({ success: false, msg: "invalid serial number" });
 
-      const data = {
-        previousOwnerAddress: product.owner,
-        newOwnerAddress: req.user.address,
-        newLocation: req.user.location,
-        productSerialNumber: product.serial_number,
-        tradeName : req.user.tradeName,
-        role : req.user.role
-      };
-    
-      const response = await contractController.transferOwnership(data);
-    
-      product.txHash = response.txhash;
+    const obj = {owner: req.user.address,
+            location: req.user.location,
+            tradeName : req.user.tradeName,
+            role : req.user.role
+        };
+
+      await Tracking.findOneAndUpdate({serialNumber : serial_number},{$push:{history:obj}})
       product.owner = req.user.address;
       product.location = req.user.location;
-      await product.save();
+      await product.save()
 
     return res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
   } catch (error) {
@@ -159,7 +151,7 @@ exports.buyProduct = async (req, res) => {
 exports.sellProduct = async function (req , res , next) {
   try{
     const serial_number = req.params.id;
-    if(!serial_number || serial_number == "")
+    if(!serial_number)
       return res.status(400).json({success :false , msg : "invalid serial number"});
 
     //check the product
@@ -176,6 +168,23 @@ exports.sellProduct = async function (req , res , next) {
 
   
     res.status(201).json({success : true , product})
+  }catch(error){
+    res.status(500).json({success : false , msg : `server error : ${error.message}`})
+  }
+}
+
+exports.productHistory = async function (req , res , next) {
+  try{
+    const serial_number = req.params.id;
+    if(!serial_number)
+      return res.status(400).json({success :false , msg : "invalid serial number"});
+
+    //check the product
+    const trackingDoc = await Tracking.findOne({serialNumber : serial_number})
+    if(!trackingDoc)
+      return res.status(400).json({success :false , msg : "invalid serial number"});
+
+    res.status(201).json({success : true , history : trackingDoc.history})
   }catch(error){
     res.status(500).json({success : false , msg : `server error : ${error.message}`})
   }
