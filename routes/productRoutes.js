@@ -17,8 +17,8 @@ router.get("/history/:id" , productHistory)
 router.use(authMiddleware.authenticate)
 router.get("/",getProducts);
 router.get("/:id",getProduct); 
-router.post("/add", addProduct); 
-router.post("/receive/:id" , receiveBatch); 
-router.post("/buy/:id" , buyProduct); 
-router.post("/sell/:id" , sellProduct);
+router.post("/add", authMiddleware.authorize('manufacturer') , addProduct); 
+router.post("/receive/:id" , authMiddleware.authorize('supplier') , receiveBatch); 
+router.post("/buy/:id" , authMiddleware.authorize('pharmacy') , buyProduct); 
+router.post("/sell/:id" , authMiddleware.authorize('pharmacy') , sellProduct);
 module.exports = router;
