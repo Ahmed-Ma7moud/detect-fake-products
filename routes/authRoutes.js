@@ -15,7 +15,8 @@ const {
   resendVerificationEmail
 } = require('../controllers/authController');
 const { auth , rateLimiter , cors} = require('../middleware/index');
-
+const validators = require("../middleware/validators/auth")
+const {validate} = require("../middleware/errorHandling")
 const router = express.Router();
 
 // same site
@@ -24,8 +25,8 @@ router.use(cors.restrictedCors)
 // limiter for all auth routes 
 router.use(rateLimiter.authLimiter)
 // Public routes
-router.post('/register' , register);
-router.post('/login', rateLimiter.loginLimiter, login); // specific limiter for login field
+router.post('/register' , validators.registerValidation , validate , register);
+router.post('/login', validators.loginValidation , validate , rateLimiter.loginLimiter, login); // specific limiter for login field
 router.get('/google', rateLimiter.loginLimiter, loginWithGoogle); // specific limiter for login field
 router.post('/google/callback', rateLimiter.loginLimiter, googleCallback); // specific limiter for login field
 router.post('/refresh-token' , refreshToken);
