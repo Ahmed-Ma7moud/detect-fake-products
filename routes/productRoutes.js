@@ -12,13 +12,14 @@ const {
 } = require('../controllers/productController');
 const rateLimiter = require("../middleware/rateLimiter")
 const authMiddleware = require("../middleware/auth")
+const {addProductValidation , idValidation} = require("../middleware/validators/product")
 router.use(rateLimiter.apiLimiter)
-router.get("/history/:id" , productHistory)
+router.get("/history/:id" , idValidation , productHistory)
 router.use(authMiddleware.authenticate)
 router.get("/",getProducts);
-router.get("/:id",getProduct); 
-router.post("/add", authMiddleware.authorize('manufacturer') , addProduct); 
-router.post("/receive/:id" , authMiddleware.authorize('supplier') , receiveBatch); 
-router.post("/buy/:id" , authMiddleware.authorize('pharmacy') , buyProduct); 
-router.post("/sell/:id" , authMiddleware.authorize('pharmacy') , sellProduct);
+router.get("/:id", idValidation , getProduct); 
+router.post("/add", addProductValidation , authMiddleware.authorize('manufacturer') , addProduct); 
+router.post("/receive/:id" , idValidation , authMiddleware.authorize('supplier') , receiveBatch); 
+router.post("/buy/:id" , idValidation , authMiddleware.authorize('pharmacy') , buyProduct); 
+router.post("/sell/:id" , idValidation , authMiddleware.authorize('pharmacy') , sellProduct);
 module.exports = router;
