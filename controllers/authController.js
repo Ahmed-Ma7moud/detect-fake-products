@@ -413,6 +413,10 @@ exports.refreshToken = async (req, res) => {
       });
     }
     
+    //validate old accessToken
+    user.accessTokenVersion = (user.accessTokenVersion + 1 ) %1000000;
+    await user.save();
+
     // Generate new accessToken
     const accessToken = user.generateAccessToken();
     
