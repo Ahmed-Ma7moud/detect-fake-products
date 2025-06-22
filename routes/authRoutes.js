@@ -19,8 +19,8 @@ const validators = require("../middleware/validators/auth")
 const {validate} = require("../middleware/errorHandling")
 const router = express.Router();
 
-// same site
-router.use(cors.restrictedCors)
+// for specific domain
+//router.use(cors.restrictedCors)
 
 // limiter for all auth routes 
 router.use(rateLimiter.authLimiter)

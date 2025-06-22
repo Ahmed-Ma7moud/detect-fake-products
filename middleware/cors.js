@@ -1,17 +1,16 @@
 const cors = require('cors');
 
 // Middleware for restricted routes
-const restrictedCors = cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || ['https://myapp.com'],
-    methods: ['GET', 'POST', 'PUT', 'DELETE'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true
-});
+// const restrictedCors = cors({
+//   origin: 'your front end domain',
+//   credentials: true, // Allow cookies
+//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
+//   allowedHeaders: ['Content-Type', 'Authorization']
+// });
 
 // Middleware for public routes
 const publicCors = cors({
     origin: '*',
-    credentials : true,
     maxAge: 86400
 });
 
