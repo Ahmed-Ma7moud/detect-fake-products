@@ -376,15 +376,25 @@ exports.logout = async (req, res) => {
 // Refresh token
 exports.refreshToken = async (req, res) => {
   try {
-    // Get refresh token from cookie
-    const refreshToken = req.cookies.refreshToken;
+    // Try to get token from cookie
+    let refreshToken = req.cookies?.refreshToken;
+
+    // If not in cookies, try from Authorization header
+    if (!refreshToken) {
+      const authHeader = req.headers['authorization'] || req.headers['Authorization'];
+      if (authHeader?.startsWith('Bearer ')) {
+        refreshToken = authHeader.split(' ')[1];
+      }
+    }
+
+    // Handle missing token
     if (!refreshToken) {
       return res.status(401).json({
         success: false,
-        message: 'Please log in'
+        message: 'Please log in',
       });
     }
-    
+        
     // Hash the token to compare with stored version
     const hashedToken = crypto
       .createHash('sha256')
