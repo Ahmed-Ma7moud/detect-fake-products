@@ -8,7 +8,8 @@ const batchSchema = new mongoose.Schema({
     },
     batchNumber : {
         type : String,
-        required : true
+        required : true,
+        unique : true
     },
     products : {
         type : [String],
