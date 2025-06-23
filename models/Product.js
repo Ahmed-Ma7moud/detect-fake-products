@@ -9,17 +9,18 @@ const ProductSchema = new mongoose.Schema({
   price: {
     type: Number,
   },
-  serial_number: {
+  serialNumber: {
     type: String,
     required: true,
     unique: true
   },
-  batch_number: {
+  batchNumber: {
     type: String,
     required: true
   },
   owner : {
-    type : String,
+    type : mongoose.Schema.Types.ObjectId,
+    ref : "User",
     required : true
   },
   location:{
@@ -31,7 +32,7 @@ const ProductSchema = new mongoose.Schema({
     type : Boolean,
     default:false
   },
-  production_date: {
+  productionDate: {
     type: Date,
     default: () => {
       const now = new Date();
@@ -39,11 +40,11 @@ const ProductSchema = new mongoose.Schema({
       return now;
     }
   },
-  expiration_date: {
+  expirationDate: {
     type: Date,
     required: true,
     default: function () {
-      const prodDate = this.production_date || new Date();
+      const prodDate = this.productionDate || new Date();
       const expiration = new Date(prodDate);
       expiration.setFullYear(expiration.getFullYear() + 3);
       return expiration;

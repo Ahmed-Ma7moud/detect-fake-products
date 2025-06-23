@@ -1,39 +1,35 @@
 const mongoose = require('mongoose');
 
 const TrackingSchema = new mongoose.Schema({
+    seller : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "User",
+        required : ture
+    },
+    buyer : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "User",
+        required : ture
+    },
     serialNumber: {
         type: String,
-        unique: true
+        ref : "Product",
+        required: true
     },
-    history: [{
-        owner: {
-            type: String,
-            required: true
-        },
-        tradeName: {
-            type: String,
-            required: true
-        },
-        location: {
-            type: String,
-            required: true
-        },
-        role: {
-            type: String,
-            required: true
-        },
-        time: {
-            type: Date, // Changed to Date type
-            required: true,
-            default: () => {
-                const now = new Date();
-                // Adjust for Cairo time zone (EET = UTC+2)
-                now.setHours(now.getHours() + 2);
-                return now;
-            }
-        },
-    }]
-});
+    productName : {
+        type : String,
+        required : true
+    },
+    time: {
+        type: Date,
+        default: function() {
+            // Create date with Egypt time zone offset
+            const egyptDate = new Date();
+            // Egypt is UTC+2 in winter and UTC+3 in summer
+            egyptDate.setHours(egyptDate.getHours() + 3);
+            return egyptDate;
+        }
+}});
 
 const Tracking = mongoose.model('Tracking', TrackingSchema);
 
