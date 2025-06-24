@@ -2,18 +2,7 @@ const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const session = require('express-session')
 
-// custom sessions
-exports.apiSessions = session({
-  secret:process.env.SESSION_SECRET,
-  resave:false,
-  saveUninitialized:false,
-  cookie:{
-    sameSite:"none",
-    secure:process.env.NODE_ENV === 'production',
-    httpOnly:true
-  }
-})
-exports.googleSessions = session({
+exports.session = session({
   secret:process.env.SESSION_SECRET,
   resave:false,
   saveUninitialized:false,

@@ -1,16 +1,13 @@
 const cors = require('cors');
 
-// Middleware for restricted routes
-// const restrictedCors = cors({
-//   origin: 'your front end domain',
-//   credentials: true, // Allow cookies
-//   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-//   allowedHeaders: ['Content-Type', 'Authorization']
-// });
-
-// Middleware for public routes
-exports.publicCors = cors({
-    origin: '*',
-    maxAge: 86400
+// only allow requests from 'http://localhost:5000' (browser)
+// postman is not a browser so it does not respect cors policy
+// and will allow all requests to reach to the server
+exports.cors = cors({
+  origin: ['http://localhost:5000'],
+  credentials: true,
+  allowedHeaders: ['Content-Type', 'Authorization']
 });
+
+
  
