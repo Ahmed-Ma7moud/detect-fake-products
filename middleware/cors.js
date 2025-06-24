@@ -9,12 +9,8 @@ const cors = require('cors');
 // });
 
 // Middleware for public routes
-const publicCors = cors({
+exports.publicCors = cors({
     origin: '*',
     maxAge: 86400
 });
-
-module.exports = {
-    restrictedCors,
-    publicCors
-}  
+ 

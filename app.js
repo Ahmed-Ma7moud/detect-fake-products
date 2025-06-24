@@ -4,12 +4,13 @@ const helmet = require('helmet');
 require('dotenv').config();
 const connectDB = require("./config/DB")
 const cors = require("./middleware/cors")
+const {session} = require('./middleware/auth')
 
 
 const app = express();
 
 // trust proxy
-app.set('trust proxy', true);
+// app.set('trust proxy', true);
 
 // Connect to MongoDB
 connectDB();
@@ -21,10 +22,8 @@ app.use(helmet())
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser())
-app.use(cors.publicCors)
-
-// session 
-const authMiddleware = require('./middleware/auth')
+app.use(cors)
+app.use(session)
 // routes
 app.get('/',(req,res)=>{
   res.status(201).send("Welcome to MediShield")
@@ -34,8 +33,8 @@ app.use('/api/auth', require('./routes/authRoutes'))
 
 //google login routes
 const {loginWithGoogle,googleCallback} = require('./controllers/authController')
-app.get('/auth/google', authMiddleware.googleSessions , loginWithGoogle)
-app.get('/auth/google/callback', authMiddleware.googleSessions , googleCallback)
+app.get('/auth/google' , loginWithGoogle)
+app.get('/auth/google/callback' , googleCallback)
 
 
 //product routes

@@ -1,188 +1,244 @@
-// controllers/productController.js
 const Product = require('../models/Product');
-const Tracking = require("../models/Tracking")
+const Tracking = require("../models/Tracking");
+const Batch = require("../models/Batch");
+const { v4: uuidv4 } = require('uuid');
 
-exports.addProduct = async (req,res) => {
-  try{
-    const {name , price , serial_number , batch_number} = req.body;
+// Add a new batch of products
+exports.addBatch = async (req, res) => {
+  try {
+    const { name, price, quantity, productionDate, expirationDate } = req.body;
 
-    if(!name || !price || !serial_number || !batch_number)
-      return res.status(400).json({success : false , msg : "missing Data"})
+    if (!name || !price || !quantity || !productionDate || !expirationDate)
+      return res.status(400).json({ success: false, msg: "Missing data" });
 
-    // check uniqueness of serial number
-    const exist = await Product.findOne({serial_number});
-    if(exist)
-      return res.status(400).json({success : false , msg : "duplicate serial number"})
+    if (quantity > 1000)
+      return res.status(400).json({ success: false, msg: "Max quantity is 1000" });
 
-//add product to database
-    const product = await Product.create({
-      name ,
-      price , 
-      serial_number , 
-      batch_number,
-      owner:req.user.address,
-      location:req.user.location
-    })
-    await Tracking.create({
-      serialNumber:serial_number,
-      history : [{
+    const count = await Batch.countDocuments({owner : req.user.owner});
+    if (count + 1 > 9999)
+      return res.status(400).json({ success: false, msg: "No more batches can be added" });
+
+    const batchNumber = `BA${(count + 1).toString().padStart(4, '0')}`;
+
+    // Prepare products for bulk insert
+    const serialNumbers = [];
+    const products = [];
+    for (let i = 0; i < quantity; i++) {
+      const serialNumber = uuidv4();
+      serialNumbers.push(serialNumber);
+      products.push({
+        name,
+        price,
+        serialNumber,
+        batchNumber,
         owner: req.user.address,
         location: req.user.location,
-        tradeName : req.user.tradeName,
-        role : "manufacturer"
-      }]
-    })
-    res.status(201).json({success : true , product});
+        productionDate,
+        expirationDate
+      });
+    }
 
-  }catch (err) {
-    res.status(500).json({ error: err.message });
+    await Product.insertMany(products);
+
+    await Batch.create({
+      owner: req.user.address,
+      batchNumber,
+      products: serialNumbers
+    });
+
+    res.status(201).json({ success: true, batchNumber, serialNumbers });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: err.message });
   }
-}
-// Get all products
+};
+
+// Get all products for the current user
 exports.getProducts = async (req, res) => {
   try {
-    const products = await Product.find({owner: req.user.address});
-      res.status(200).json({
+    const products = await Product.find({ owner: req.user.address });
+    res.status(200).json({
       success: true,
       count: products.length,
       products
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'Server Error'
-    });
+    res.status(500).json({ success: false, msg: 'Server Error' });
   }
 };
 
-// Get single product
+// Get a single product by serial number
 exports.getProduct = async (req, res) => {
   try {
-    const serial_number = req.params.id
-    if(!serial_number || serial_number == "")
-      return res.status(400).json({success : false , msg : "invalid serial number"});
+    const serialNumber = req.params.id;
+    if (!serialNumber)
+      return res.status(400).json({ success: false, msg: "Invalid serial number" });
 
-    const product = await Product.findOne({serial_number});
-    if(!product)
-      return res.status(400).json({success : false , msg : "invalid serial number"});
+    const product = await Product.findOne({ serialNumber });
+    if (!product)
+      return res.status(404).json({ success: false, msg: "Product not found" });
 
+    res.status(200).json({ success: true, product });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: 'Server Error' });
+  }
+};
+
+// get sold products
+exports.getSoldProducts = async (req, res) => {
+  try {
+    const soldProducts = await Tracking.find({ seller : req.user.address });
     res.status(200).json({
       success: true,
-      product
+      soldProducts
     });
   } catch (err) {
-    res.status(500).json({
-      success: false,
-      error: 'Server Error'
-    });
+    res.status(500).json({ success: false, msg: 'Server Error' });
   }
 };
 
-// for supplier to receive a batch of products 
+// Supplier receives a batch of products
 exports.receiveBatch = async (req, res) => {
   try {
-    const batch_number = req.params.id;
-
-    if (!batch_number)
+    const batchNumber = req.params.id;
+    if (!batchNumber)
       return res.status(400).json({ success: false, msg: "Invalid batch number" });
 
-    const products = await Product.find({ batch_number });
-
+    const products = await Product.find({ batchNumber });
     if (!products.length)
-      return res.status(400).json({ success: false, msg: "No products found for this batch number" });
+      return res.status(404).json({ success: false, msg: "No products found for this batch number" });
 
-    const obj = {owner: req.user.address,
-        location: req.user.location,
-        tradeName : req.user.tradeName,
-        role : req.user.role
-    };
-    console.log(obj)
+    const seller = products[0].owner;
+    const buyer = req.user.address;
+    if (seller === buyer)
+      return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
 
-    await Promise.all(products.map(async (product) => {
-      await Tracking.findOneAndUpdate({serialNumber : product.serial_number},
-        {$push:{history:obj}}
-      )
-      console.log("success")
-      product.owner = req.user.address;
-      product.location = req.user.location;
-      await product.save()
+    // Bulk update owner and location
+    await Product.updateMany(
+      { batchNumber },
+      { $set: { owner: buyer, location: req.user.location } }
+    );
+
+    // Bulk insert tracking records
+    const transactions = products.map(product => ({
+      seller,
+      buyer,
+      serialNumber: product.serialNumber,
+      productName: product.name
     }));
-    
-    return res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
-  } catch (error) {
-    return res.status(500).json({ success: false, msg: error.message });
+    await Tracking.insertMany(transactions);
+
+    res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: err.message });
   }
 };
 
-// for pharmacy to buy
+// Pharmacy buys a single product
 exports.buyProduct = async (req, res) => {
   try {
-    const serial_number = req.params.id;
+    const serialNumber = req.params.id;
+    if (!serialNumber)
+      return res.status(400).json({ success: false, msg: "Invalid serial number" });
 
-    if (!serial_number)
-      return res.status(400).json({ success: false, msg: "Invalid batch number" });
-
-    const product = await Product.findOne({ serial_number });
-
+    const product = await Product.findOne({ serialNumber });
     if (!product)
-      return res.status(400).json({ success: false, msg: "invalid serial number" });
+      return res.status(404).json({ success: false, msg: "Product not found" });
 
-    const obj = {owner: req.user.address,
-            location: req.user.location,
-            tradeName : req.user.tradeName,
-            role : req.user.role
-        };
+    const seller = product.owner;
+    const buyer = req.user.address;
+    if (seller === buyer)
+      return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
 
-      await Tracking.findOneAndUpdate({serialNumber : serial_number},{$push:{history:obj}})
-      product.owner = req.user.address;
-      product.location = req.user.location;
-      await product.save()
+    await Tracking.create({
+      seller,
+      buyer,
+      serialNumber,
+      productName: product.name
+    });
 
-    return res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
-  } catch (error) {
-    return res.status(500).json({ success: false, msg: error.message });
+    await Product.updateOne(
+      { serialNumber },
+      { owner: buyer, location: req.user.location }
+    );
+
+    res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: err.message });
   }
 };
 
-//sell product from pharmacy to patient 
-exports.sellProduct = async function (req , res , next) {
-  try{
-    const serial_number = req.params.id;
-    if(!serial_number)
-      return res.status(400).json({success :false , msg : "invalid serial number"});
+// Sell product from pharmacy to patient
+exports.sellProduct = async (req, res) => {
+  try {
+    const serialNumber = req.params.id;
+    if (!serialNumber)
+      return res.status(400).json({ success: false, msg: "Invalid serial number" });
 
-    //check the product
-    const product = await Product.findOne({serial_number})
-    if(!product)
-      return res.status(400).json({success :false , msg : "invalid serial number"});
+    const product = await Product.findOne({ serialNumber });
+    if (!product)
+      return res.status(404).json({ success: false, msg: "Product not found" });
 
-    if(product.sold == true)
-      return res.status(400).json({success :false , msg : "this product is already sold to another patient"});
+    if (product.sold)
+      return res.status(400).json({ success: false, msg: "This product is already sold to another patient" });
 
-    // change status of product to sold
-    product.sold = true;
-    await product.save();
+    await Product.updateOne(
+      { serialNumber },
+      { sold: true }
+    );
 
-  
-    res.status(201).json({success : true , product})
-  }catch(error){
-    res.status(500).json({success : false , msg : `server error : ${error.message}`})
+    res.status(200).json({ success: true, product });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
   }
+};
+
+// Get product transaction history
+exports.productHistory = async (req, res) => {
+  try {
+    const serialNumber = req.params.id;
+    if (!serialNumber)
+      return res.status(400).json({ success: false, msg: "Invalid serial number" });
+
+    const trackingDocs = await Tracking.find({ serialNumber });
+    if (!trackingDocs.length)
+      return res.status(404).json({ success: false, msg: "No history found for this serial number" });
+
+    res.status(200).json({ success: true, history: trackingDocs });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
+  }
+};
+
+exports.getBatches = async(req , res , next) => {
+  try{
+    const batches = await Batch.find({owner : req.user.owner},("-owner -_id"))
+    return res.status(200).json({batches})
+  } catch(error){
+      return res.status(500).json({message : "faild to get batches"})
+  } 
 }
 
-exports.productHistory = async function (req , res , next) {
-  try{
-    const serial_number = req.params.id;
-    if(!serial_number)
-      return res.status(400).json({success :false , msg : "invalid serial number"});
+exports.getNearestLocations = async (req, res, next) => {
+  const { location, limit = 20 } = req.query;
 
-    //check the product
-    const trackingDoc = await Tracking.findOne({serialNumber : serial_number})
-    if(!trackingDoc)
-      return res.status(400).json({success :false , msg : "invalid serial number"});
-
-    res.status(201).json({success : true , history : trackingDoc.history})
-  }catch(error){
-    res.status(500).json({success : false , msg : `server error : ${error.message}`})
+  if (!location) {
+    return res.status(400).json({ success: false, msg: "Location is required" });
   }
-}
+
+  try {
+    const regex = new RegExp(location, 'i'); // Case-insensitive partial match
+
+    const products = await Product.find({
+      location: { $regex: regex },
+      sold: false
+    }).limit(Number(limit));
+
+    if (!products.length) {
+      return res.status(404).json({ success: false, msg: "No available products in this location" });
+    }
+
+    res.status(200).json({ success: true, products });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: `Server Error: ${err.message}` });
+  }
+};

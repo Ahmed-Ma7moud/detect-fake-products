@@ -4,12 +4,12 @@ const TrackingSchema = new mongoose.Schema({
     seller : {
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
-        required : ture
+        required : true
     },
     buyer : {
         type : mongoose.Schema.Types.ObjectId,
         ref : "User",
-        required : ture
+        required : true
     },
     serialNumber: {
         type: String,
