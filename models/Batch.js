@@ -2,7 +2,7 @@ const mongoose = require ("mongoose")
 
 const batchSchema = new mongoose.Schema({
     owner : {
-        type : mongoose.Schema.Types.ObjectId,
+        type : String,
         ref : "User",
         required : true
     },
@@ -25,3 +25,5 @@ const batchSchema = new mongoose.Schema({
         }
     }
 })
+
+module.exports = mongoose.model('Batch', batchSchema);

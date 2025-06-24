@@ -19,13 +19,13 @@ const ProductSchema = new mongoose.Schema({
     required: true
   },
   owner : {
-    type : mongoose.Schema.Types.ObjectId,
+    type : String,
     ref : "User",
     required : true
   },
   location:{
     type: String,
-    default : "Unknown",
+    default : "unknown",
     required:true
   },
   sold:{

@@ -2,12 +2,12 @@ const mongoose = require('mongoose');
 
 const TrackingSchema = new mongoose.Schema({
     seller : {
-        type : mongoose.Schema.Types.ObjectId,
+        type : String,
         ref : "User",
         required : true
     },
     buyer : {
-        type : mongoose.Schema.Types.ObjectId,
+        type : String,
         ref : "User",
         required : true
     },
