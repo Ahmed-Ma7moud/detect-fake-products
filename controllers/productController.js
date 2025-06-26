@@ -1,20 +1,20 @@
 const Product = require('../models/Product');
 const Tracking = require("../models/Tracking");
 const Batch = require("../models/Batch");
+const Order = require('../models/Order');
 const { v4: uuidv4 } = require('uuid');
 
 // Add a new batch of products
 exports.addBatch = async (req, res) => {
   try {
-    const { name, price, quantity, productionDate, expirationDate } = req.body;
-
-    if (!name || !price || !quantity || !productionDate || !expirationDate)
+    const { medicineName, genericName, price, quantity, productionDate, expirationDate } = req.body;
+    if (!medicineName || !genericName || !price || !quantity || !productionDate || !expirationDate)
       return res.status(400).json({ success: false, msg: "Missing data" });
 
     if (quantity > 1000)
       return res.status(400).json({ success: false, msg: "Max quantity is 1000" });
 
-    const count = await Batch.countDocuments({owner : req.user.owner});
+    const count = await Batch.countDocuments({factory : req.user.address});
     if (count + 1 > 9999)
       return res.status(400).json({ success: false, msg: "No more batches can be added" });
 
@@ -24,10 +24,11 @@ exports.addBatch = async (req, res) => {
     const serialNumbers = [];
     const products = [];
     for (let i = 0; i < quantity; i++) {
-      const serialNumber = uuidv4();
+      let serialNumber = uuidv4();
       serialNumbers.push(serialNumber);
       products.push({
-        name,
+        medicineName,
+        genericName,
         price,
         serialNumber,
         batchNumber,
@@ -37,16 +38,24 @@ exports.addBatch = async (req, res) => {
         expirationDate
       });
     }
-
+    // insert products to product collection
     await Product.insertMany(products);
-
-    await Batch.create({
-      owner: req.user.address,
+    // any Manufacturer can see his batches and serial numbers
+    const batch = await Batch.create({
+      factory: req.user.address,
       batchNumber,
+      medicineName,
+      genericName,
+      quantity,
+      price,
+      productionDate,
+      expirationDate,
       products: serialNumbers
     });
 
-    res.status(201).json({ success: true, batchNumber, serialNumbers });
+    if (!batch)
+      return res.status(500).json({ success: false, msg: "Failed to create batch" });   
+    res.status(201).json({ success: true, batch, msg: "Batch created successfully"});
   } catch (err) {
     res.status(500).json({ success: false, msg: err.message });
   }
@@ -99,14 +108,16 @@ exports.getSoldProducts = async (req, res) => {
 // Supplier receives a batch of products
 exports.receiveBatch = async (req, res) => {
   try {
-    const batchNumber = req.params.id;
-    if (!batchNumber)
-      return res.status(400).json({ success: false, msg: "Invalid batch number" });
+    const batchNumber = req.params.batch;
+    const batch = await Batch.findOne(batchNumber);
+    if(!batch)
+      return res.status(400).json({message : "invalid batch number"})
+
+    batch.soldTo = req.user.address
+    await batch.save();
 
     const products = await Product.find({ batchNumber });
-    if (!products.length)
-      return res.status(404).json({ success: false, msg: "No products found for this batch number" });
-
+    
     const seller = products[0].owner;
     const buyer = req.user.address;
     if (seller === buyer)
@@ -137,9 +148,6 @@ exports.receiveBatch = async (req, res) => {
 exports.buyProduct = async (req, res) => {
   try {
     const serialNumber = req.params.id;
-    if (!serialNumber)
-      return res.status(400).json({ success: false, msg: "Invalid serial number" });
-
     const product = await Product.findOne({ serialNumber });
     if (!product)
       return res.status(404).json({ success: false, msg: "Product not found" });
@@ -171,10 +179,8 @@ exports.buyProduct = async (req, res) => {
 exports.sellProduct = async (req, res) => {
   try {
     const serialNumber = req.params.id;
-    if (!serialNumber)
-      return res.status(400).json({ success: false, msg: "Invalid serial number" });
 
-    const product = await Product.findOne({ serialNumber });
+    const product = await Product.findOne({ owner : req.user.address , serialNumber });
     if (!product)
       return res.status(404).json({ success: false, msg: "Product not found" });
 
@@ -200,10 +206,14 @@ exports.productHistory = async (req, res) => {
       return res.status(400).json({ success: false, msg: "Invalid serial number" });
 
     const trackingDocs = await Tracking.find({ serialNumber });
+    const isSold = await Product.findOne({serialNumber})
     if (!trackingDocs.length)
       return res.status(404).json({ success: false, msg: "No history found for this serial number" });
 
-    res.status(200).json({ success: true, history: trackingDocs });
+    if(!isSold)
+      return res.status(200).json({ success: true, history: trackingDocs });
+
+    res.status(200).json({ success: true, sold : true , history: trackingDocs });
   } catch (err) {
     res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
   }
@@ -211,19 +221,26 @@ exports.productHistory = async (req, res) => {
 
 exports.getBatches = async(req , res , next) => {
   try{
-    const batches = await Batch.find({owner : req.user.owner},("-owner -_id"))
+
+    const batches = await Batch.find({factory : req.user.address},("-factory"))
+
     return res.status(200).json({batches})
   } catch(error){
       return res.status(500).json({message : "faild to get batches"})
   } 
 }
 
-exports.getNearestLocations = async (req, res, next) => {
-  const { location, limit = 20 } = req.query;
+exports.deleteBatch = async (req , res , next) => {
+    const batchNumber = req.body;
+    if(!batchNumber || !isHexString(batchNumber))
+      return res.status.json({message: "Invalid batch number"})
+    await Batch.findOneAndDelete({batchNumber})
+    await Product.deleteMany({batchNumber})
+    return res.status(200).json({message : "Batch deleted successfully"})
+}
 
-  if (!location) {
-    return res.status(400).json({ success: false, msg: "Location is required" });
-  }
+exports.getNearestLocations = async (req, res, next) => {
+  let { location, limit } = req.query;
 
   try {
     const regex = new RegExp(location, 'i'); // Case-insensitive partial match

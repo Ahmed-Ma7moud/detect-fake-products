@@ -1,7 +1,12 @@
 const mongoose = require('mongoose');
 
 const ProductSchema = new mongoose.Schema({
-  name: {
+  medicineName: {
+    type: String,
+    required: true,
+    trim: true
+  },
+  genericName: {
     type: String,
     required: true,
     trim: true
@@ -50,6 +55,8 @@ const ProductSchema = new mongoose.Schema({
       return expiration;
     }
   }
+},{
+  versionKey: false
 });
 
 module.exports = mongoose.model('Product', ProductSchema);

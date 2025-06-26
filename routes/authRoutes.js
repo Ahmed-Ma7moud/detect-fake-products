@@ -12,7 +12,8 @@ const {
   forgotPassword,
   resetPassword,
   verifyEmail,
-  resendVerificationEmail
+  resendVerificationEmail,
+  getUserProfile
 } = require('../controllers/authController');
 const { auth , rateLimiter , cors} = require('../middleware/index');
 const validators = require("../middleware/validators/auth")
@@ -33,10 +34,10 @@ router.post('/refresh-token' , refreshToken);
 router.post('/forgot-password', forgotPassword);
 router.patch('/reset-password/:token', resetPassword);
 router.get('/verify-email/:token', verifyEmail);
-router.post('/resend-verification-email', auth.authenticate, resendVerificationEmail); 
+router.post('/resend-verification-email', resendVerificationEmail); 
 
 // Protected routes to fetch user payload / data before going to route
-
+router.get('/profile' , auth.authenticate , getUserProfile);
 router.post('/logout', auth.authenticate , logout);
 router.post('/setup-2fa', auth.authenticate ,setup2FA);
 router.post('/enable-2fa', auth.authenticate , enable2FA);

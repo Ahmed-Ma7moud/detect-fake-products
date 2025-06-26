@@ -3,7 +3,7 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 require('dotenv').config();
 const connectDB = require("./config/DB")
-const cors = require("./middleware/cors")
+const {cors} = require("./middleware/cors")
 const {session} = require('./middleware/auth')
 
 
@@ -17,7 +17,6 @@ connectDB();
 
 //helmet 
 app.use(helmet())
-
 // Middleware
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
@@ -40,6 +39,11 @@ app.get('/auth/google/callback' , googleCallback)
 //product routes
 app.use('/api/products', require('./routes/productRoutes'));
 
+//contract routes
+app.use('/api/contracts', require('./routes/contractRoutes'));
+
+//orders route
+app.use('/api/orders', require('./routes/orderRoutes'));
 app.use((req, res, next) => {
   res.status(404).json({success : false , msg :'Sorry, the requested resource was not found.'});
 });

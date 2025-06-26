@@ -3,17 +3,14 @@ const mongoose = require('mongoose');
 const TrackingSchema = new mongoose.Schema({
     seller : {
         type : String,
-        ref : "User",
         required : true
     },
     buyer : {
         type : String,
-        ref : "User",
         required : true
     },
     serialNumber: {
         type: String,
-        ref : "Product",
         required: true
     },
     productName : {
@@ -29,7 +26,10 @@ const TrackingSchema = new mongoose.Schema({
             egyptDate.setHours(egyptDate.getHours() + 3);
             return egyptDate;
         }
-}});
+    }
+},{
+  versionKey: false
+});
 
 const Tracking = mongoose.model('Tracking', TrackingSchema);
 

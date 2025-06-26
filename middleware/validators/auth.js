@@ -28,7 +28,7 @@ exports.registerValidation = [
     body('location')
     .optional()
     .trim()
-    .matches(/^\w{2,50}$/)
+    .matches(/^[\w,-\s]{2,50}$/)
     .withMessage("location has invalid chars or length should between 2-50 chars")
     .escape(),
 
@@ -79,6 +79,6 @@ exports.loginValidation = [
 
     body("otp")
     .optional()
-    .isInt({min : 100000 , max : 999999})
+    .matches(/^\d{6}$/)
     .withMessage("invalid otp number")
 ]

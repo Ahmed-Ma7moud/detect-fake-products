@@ -8,7 +8,8 @@ const qrcode = require('qrcode');
 const qs = require('qs')
 const axios = require('axios')
 const jwksClient = require('jwks-rsa')
-const {generateEthAddress} = require('../utils/generateEtherAddress')
+const {generateEthAddress} = require('../utils/generateEtherAddress');
+const exp = require('constants');
 // Register a new user
 exports.register = async (req, res) => {
   try {
@@ -98,6 +99,13 @@ exports.login = async (req, res) => {
       return res.status(400).json({ message: "Login with Google" });
     }
     
+    // check if email account is verified
+    // if (!user.isEmailVerified) {
+    //   return res.status(401).json({
+    //     success: false,
+    //     message: 'Please verify your email before logging in.'
+    //   });
+    // }
     // Check if account is locked
     if (user.accountLocked && user.accountLocked.status) {
       if (user.accountLocked.until > Date.now()) {
@@ -218,6 +226,7 @@ exports.loginWithGoogle = async (req,res,next) =>{
 exports.googleCallback = async(req,res,next) => {
   const code = req.query.code;
   const state = req.query.state; // Get the state from the query parameters(google res)
+
   if (!state) {
     return res.status(400).send("Missing  state");
   }
@@ -480,9 +489,11 @@ exports.setup2FA = async (req, res) => {
 // Verify and enable 2FA
 exports.enable2FA = async (req, res) => {
   try {
-    const user = req.user;
+    const user = await User.findById(req.user.id , "googleAuthKey twoFactorEnabled");
+    if(user.twoFactorEnabled)
+      return res.status(200).json({message : "Two factor authentication is already enabled"})
     const { token } = req.body;
-    
+
     if (!user || !user.googleAuthKey) {
       return res.status(400).json({
         success: false,
@@ -531,10 +542,10 @@ exports.enable2FA = async (req, res) => {
 // Verify and disable 2FA
 exports.disable2FA = async (req, res) => {
   try {
-    const user = req.user;
+    const user = await User.findById(req.user.id , "twoFactorEnabled googleAuthKey");
     const { token } = req.body;
 
-    if (!user || !user.twoFactorEnabled) {
+    if (!user.twoFactorEnabled) {
       return res.status(400).json({
         success: false,
         message: 'Two-factor authentication is already disabled'
@@ -700,6 +711,7 @@ exports.resetPassword = async (req, res) => {
 // Verify email
 exports.verifyEmail = async (req, res) => {
   try {
+    
     // Get token and hash it
     const verificationToken = req.params.token;
     const hashedToken = crypto
@@ -721,7 +733,7 @@ exports.verifyEmail = async (req, res) => {
     
     // Mark email as verified and remove token
     user.isEmailVerified = true;
-    user.resetPasswordToken = undefined;
+    user.emailVerificationToken = undefined;
     
     await user.save({ validateBeforeSave: false });
     
@@ -737,44 +749,68 @@ exports.verifyEmail = async (req, res) => {
   }
 };
 
+// Require user to provide email in request body if not already authenticated
 exports.resendVerificationEmail = async (req, res) => {
   try {
-    const user = req.user;
-    if(user.isEmailVerified){
-      return res.status(200).json({
-        success:"true",
-        message:"Your Email is already verified"
-      })
+    const { email } = req.body;
+
+    // Find user by email
+    const user = await User.findOne({ email });
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "No user found with this email"
+      });
     }
 
-    // Generate verification token
+    if (user.isEmailVerified) {
+      return res.status(200).json({
+        success: true,
+        message: "Your email is already verified"
+      });
+    }
+
+    // Generate new verification token
     const verificationToken = user.generateEmailVerificationToken();
 
-    // Send verification email
-    const verificationURL = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
-    try{
-      await sendEmail({
-        email: user.email,
-        subject: 'Email Verification',
-        message: `Please verify your email by clicking: ${verificationURL}`
-      });
-    }catch (error) {
-      res.status(500).json({
-        success: "false",
-        message: error.message
-      });
-    }
-    
-    //save encrypted token after calling generatePasswordResetToken
+    // Save token (but skip validation)
     await user.save({ validateBeforeSave: false });
+
+    // Construct verification link
+    const verificationURL = `${req.protocol}://${req.get('host')}/api/auth/verify-email/${verificationToken}`;
+
+    // Send email
+    await sendEmail({
+      email: user.email,
+      subject: 'Email Verification',
+      message: `Please verify your email by clicking the following link: ${verificationURL}`
+    });
 
     res.status(200).json({
       success: true,
-      message: 'Token sent successfully.Please check your email',
+      message: "Verification email sent. Please check your inbox."
+    });
+
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+exports.getUserProfile = async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id)
+      .select('firstName lastName email  location tradeName  wallet_address _id picture');
+
+    res.status(200).json({
+      success: true,
+      user
     });
   } catch (error) {
     res.status(500).json({
-      success: "false",
+      success: false,
       message: error.message
     });
   }
