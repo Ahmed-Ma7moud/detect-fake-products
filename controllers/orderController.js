@@ -1,5 +1,5 @@
 const Order = require('../models/Order');
-const Contract = require('../models/contract');
+const Contract = require('../models/Contract');
 const Batch = require('../models/Batch');
 const mongoose = require('mongoose');
 exports.createOrder = async (req, res) => {

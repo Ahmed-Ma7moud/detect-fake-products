@@ -1,5 +1,5 @@
 const User = require('../models/User');
-const Contract = require('../models/contract');
+const Contract = require('../models/Contract');
 const mongoose = require('mongoose');
 exports.makeContract = async (req, res, next) => {
   try {
