@@ -38,7 +38,7 @@ exports.addBatchValidation = [
 ];
 
 // ID validation (e.g. UUID / serial number)
-exports.idValidation = [
+exports.uuidValidation = [
   validateText("id", UUID_REGEX, 'param')
     .withMessage("Invalid ID format (must be a UUID)")
 ];

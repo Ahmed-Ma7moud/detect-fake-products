@@ -1,6 +1,11 @@
 const mongoose = require('mongoose');
 
 const ProductSchema = new mongoose.Schema({
+  factory : {
+    type : mongoose.Schema.ObjectId,
+    ref : "User",
+    required : true
+  },
   medicineName: {
     type: String,
     required: true,
@@ -24,13 +29,12 @@ const ProductSchema = new mongoose.Schema({
     required: true
   },
   owner : {
-    type : String,
+    type : mongoose.Schema.Types.ObjectId,
     ref : "User",
     required : true
   },
   location:{
     type: String,
-    default : "unknown",
     required:true
   },
   sold:{

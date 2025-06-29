@@ -1,20 +1,17 @@
 const mongoose = require('mongoose');
 
 const TrackingSchema = new mongoose.Schema({
-    seller : {
-        type : String,
-        required : true
-    },
-    buyer : {
-        type : String,
-        required : true
-    },
     serialNumber: {
         type: String,
         required: true
     },
-    productName : {
+    medicineName : {
         type : String,
+        required : true
+    },
+    owner : {
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "User",
         required : true
     },
     time: {
@@ -31,6 +28,7 @@ const TrackingSchema = new mongoose.Schema({
   versionKey: false
 });
 
+TrackingSchema.index({serialNumber : 1})
 const Tracking = mongoose.model('Tracking', TrackingSchema);
 
 module.exports = Tracking;

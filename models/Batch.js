@@ -2,7 +2,12 @@ const mongoose = require ("mongoose")
 
 const batchSchema = new mongoose.Schema({
     factory : {
-        type : String,
+        type : mongoose.Schema.Types.ObjectId,
+        ref : "User",
+        required : true
+    },
+    owner : {
+        type : mongoose.Schema.Types.ObjectId,
         ref : "User",
         required : true
     },
@@ -38,6 +43,11 @@ const batchSchema = new mongoose.Schema({
     expirationDate : {
         type : Date
     },
+    status : {
+        type : String,
+        enum : ['available', 'unavailable' , 'sold'],
+        default : 'available'
+    }
 },{
   versionKey: false
 })

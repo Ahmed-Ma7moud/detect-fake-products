@@ -35,6 +35,8 @@ const {loginWithGoogle,googleCallback} = require('./controllers/authController')
 app.get('/auth/google' , loginWithGoogle)
 app.get('/auth/google/callback' , googleCallback)
 
+//batch routes
+app.use('/api/batches' , require('./routes/batchRoutes'))
 
 //product routes
 app.use('/api/products', require('./routes/productRoutes'));
@@ -51,6 +53,7 @@ app.use((req, res, next) => {
 
 const PORT = parseInt(process.env.PORT,10) || 3000;
 
-app.listen(PORT, () => {
+const host = "192.168.156.28"
+app.listen(PORT, host , () => {
   console.log(`Server running on port ${PORT}`);
 });

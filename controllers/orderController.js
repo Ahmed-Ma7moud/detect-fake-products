@@ -7,19 +7,18 @@ exports.createOrder = async (req, res) => {
     const {supplierID, batchNumber } = req.body;
 
     if (!supplierID || !batchNumber) {
-      return res.status(400).json({ success: false, msg: "Missing required fields" });
+      return res.status(400).
+      json({ success: false, msg: "Missing required fields" });
     }
-    console.log(req.user.address)
-    console.log(batchNumber)
-    // Check ownership of the batch
-    const batch = await Batch.findOne({ batchNumber , factory: req.user.address });
-    if (!batch) {
-      return res.status(400).json({ success: false, msg: "You do not own this batch" });
+
+    if(!mongoose.Types.ObjectId.isValid(supplierID)){
+      return res.status(400).
+      json({ success: false, msg: "Invalid supplier ID" });
     }
 
     // Check if factory and supplier have a valid contract
     const contract = await Contract.findOne({
-      factory: req.user.address,
+      factory: req.user.id,
       supplier: supplierID,
       status: 'accepted'
     });
@@ -27,11 +26,17 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ success: false, msg: "No valid contract found" });
     }
 
+    // Check ownership of the batch
+    const batch = await Batch.findOne({ batchNumber , factory: req.user.id  , status : "avaliable"});
+    if (!batch) {
+      return res.status(400).json({ success: false, msg: "You do not own this batch" });
+    }
+
     //create the order
     const newOrder = await Order.create({
-      factory: req.user.address,
+      factory: req.user.id,
       supplier: supplierID,
-      batchNumber
+      batchNumber : batch._id
     });
 
     if (!newOrder) {
@@ -44,6 +49,46 @@ exports.createOrder = async (req, res) => {
   }
 }
 
+// Delete order if not accepted by the supplier
+exports.deleteOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    if (!orderId) {
+      return res.status(400).json({ success: false, msg: "Missing order ID" });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(orderId)) {
+      return res.status(400).json({ success: false, msg: "Invalid order ID" });
+    }
+
+    // Find the order
+    const order = await Order.findById(orderId);
+
+    if (!order) {
+      return res.status(404).json({ success: false, msg: "Order not found" });
+    }
+    if(order.status != "pending"){
+        return res.status(404).json({ success: false, msg: "You can not cancel this order" });
+    }
+    // Check if the order is pending and belongs to the factory
+    if (order.factory.toString() !== req.user.id) {
+      return res.status(403).json({ success: false, msg: "Unauthorized to delete this order" });
+    }
+
+    if (order.status !== 'pending') {
+      return res.status(400).json({ success: false, msg: "Can not delete order" });
+    }
+
+    // Delete the order
+    await order.remove();
+
+    res.status(200).json({ success: true, msg: "Order deleted successfully" });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
+  }
+}
+
 exports.getOrders = async (req, res) => {
   try {
     let orders = [];
@@ -51,12 +96,12 @@ exports.getOrders = async (req, res) => {
       orders = await Order.find({ factory: req.user.id })
         .populate('supplier', 'tradeName email location')
         .populate('batchNumber', 'medicineName batchNumber quantity price')
-        .select('-__v');
+        .select('-__v -factory');
     } else if (req.user.role === 'supplier') {
       orders = await Order.find({ supplier: req.user.id })
         .populate('factory', 'tradeName email location')
-        .populate('batchNumber', 'batchNumber productName')
-        .select('-__v');
+        .populate('batchNumber', 'medicineName batchNumber quantity price')
+        .select('-__v -supplier');
     }
 
     res.status(200).json({ success: true, orders });
