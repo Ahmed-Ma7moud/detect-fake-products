@@ -53,7 +53,6 @@ app.use((req, res, next) => {
 
 const PORT = parseInt(process.env.PORT,10) || 3000;
 
-const host = "192.168.156.28"
-app.listen(PORT, host , () => {
+app.listen(PORT , () => {
   console.log(`Server running on port ${PORT}`);
 });
