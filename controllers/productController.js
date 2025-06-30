@@ -100,7 +100,7 @@ exports.buyProduct = async (req, res) => {
 
     const seller = product.owner;
     const buyer = req.user.id;
-    if (seller === buyer)
+    if (seller.toString() === buyer.toString())
       return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
 
     await Tracking.create({
@@ -112,6 +112,12 @@ exports.buyProduct = async (req, res) => {
     await Product.updateOne(
       { serialNumber },
       { owner: buyer, location: req.user.location }
+    );
+
+    // update product in the batch
+    await Batch.updateOne(
+      { "products.serialNumber": serialNumber },
+      { $set: { "products.$.sold": true } }
     );
 
     res.status(200).json({

@@ -1,10 +1,10 @@
 const Batch = require("../models/Batch");
 const Product = require("../models/Product");
 const Contract = require("../models/Contract");
+const User = require("../models/User");
 const Tracking = require("../models/Tracking");
 const { v4: uuidv4 } = require('uuid');
 const { default: mongoose } = require("mongoose");
-const { decodeBytes32String } = require("ethers");
 
 exports.addBatch = async (req, res) => {
   try {
@@ -19,14 +19,16 @@ exports.addBatch = async (req, res) => {
     if (count + 1 > 9999)
       return res.status(400).json({ success: false, msg: "No more batches can be added" });
 
-    const batchNumber = `BA${(count + 1).toString().padStart(4, '0')}`;
+    // Generate a unique batch number
+    const user = await User.findById(req.user.id , "factoryCode");
+    const batchNumber = `${user.factoryCode}-BA${(count + 1).toString().padStart(4, '0')}`;
 
     // Prepare products for bulk insert
     const serialNumbers = [];
     const products = [];
     for (let i = 0; i < quantity; i++) {
       let serialNumber = uuidv4();
-      serialNumbers.push(serialNumber);
+      serialNumbers.push({serialNumber});
       products.push({
         factory : req.user.id,
         medicineName, 

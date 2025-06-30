@@ -34,7 +34,16 @@ const batchSchema = new mongoose.Schema({
         unique : true
     },
     products : {
-        type : [String],
+        type : [{
+            serialNumber : {
+                type : String,
+            },
+            sold : {
+                type : Boolean,
+                default : false
+            },
+            _id: false
+        }],
         required : true
     },
     productionDate : {

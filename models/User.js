@@ -47,6 +47,10 @@ const userSchema = new mongoose.Schema({
   tradeName : {
     type : String
   },
+
+  factoryCode: {
+    type: String,
+  },
   picture: {
     type: String,
     default: '/uploads/images/avatar.png'

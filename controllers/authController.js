@@ -13,63 +13,74 @@ const exp = require('constants');
 // Register a new user
 exports.register = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, age , location, tradeName , role} = req.body;
-    let user = await User.findOne({email})
-    if(user)
-      return res.status(400).json({msg:false,error:"User is Already exist"})
+    const { firstName, lastName, email, password, age, location, tradeName, role } = req.body;
 
-    // generate private key and wallet address
-    const {address , privateKey} =  await generateEthAddress();
-    // Create user if He does not exist in database
-    user = new User({
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ success: false, error: "User already exists" });
+    }
+
+    // Generate Ethereum wallet
+    const { address, privateKey } = await generateEthAddress();
+
+    // Generate factory code if role is manufacturer
+    let factoryCode = null;
+    if (role === 'manufacturer') {
+      const factoryCount = await User.countDocuments({ role: 'manufacturer' });
+      factoryCode = `FA${factoryCount + 1}`;
+    }
+
+    // Create new user
+    const user = new User({
       firstName,
       lastName,
       email,
       password,
       age,
       location,
-      privateKey,
-      wallet_address:address,
       tradeName,
-      role
+      role,
+      factoryCode,
+      privateKey,
+      wallet_address: address
     });
 
-    // Generate verification token
+    // Generate email verification token
     const verificationToken = user.generateEmailVerificationToken();
 
-//Send verification email
-const verificationURL = `${process.env.BASE_URL}/api/auth/verify-email/${verificationToken}`;
-    try{
-      await sendEmail({
-        email: user.email,
-        subject: 'Email Verification',
-        message: `Please verify your email by clicking: ${verificationURL}`
-      });
-    }catch (error) {
-      res.status(500).json({
-        success: false,
-        message: error.message
-      });
-    }
-    
+    // Send verification email
+    // const verificationURL = `${process.env.BASE_URL}/api/auth/verify-email/${verificationToken}`;
+    // try {
+    //   await sendEmail({
+    //     email: user.email,
+    //     subject: 'Email Verification',
+    //     message: `Please verify your email by clicking: ${verificationURL}`
+    //   });
+    // } catch (emailError) {
+    //   return res.status(500).json({
+    //     success: false,
+    //     message: emailError.message
+    //   });
+    // }
 
-    // save user in database after sending email and before assign payload (user._id)
+    // Save user
     await user.save();
-    
-    await user.save({ validateBeforeSave: false });
 
     res.status(201).json({
       success: true,
       message: 'User registered successfully. Please verify your email.'
     });
+
   } catch (error) {
-    console.log(error)
-    res.status(400).json({
+    console.error(error);
+    res.status(500).json({
       success: false,
       message: error.message
     });
   }
 };
+
 
 //  traditional login
 exports.login = async (req, res) => {
