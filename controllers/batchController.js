@@ -119,6 +119,7 @@ exports.getBatches = async(req , res , next) => {
   try{
     let {status} = req.query;
     let query = {};
+    let batches;
     if(req.user.role === "supplier")
       query.owner = req.user.id;
     else if(req.user.role === "manufacturer"){
@@ -129,8 +130,16 @@ exports.getBatches = async(req , res , next) => {
       query.status = status;
     }
 
-    const batches = await Batch.find(query,("-owner -__v -status"))
-
+    if(req.user.role === "supplier"){
+      batches = await Batch.find(query)
+      .populate("factory", "tradeName location")
+      .select("-__v");
+    }
+    else if(req.user.role === "manufacturer"){
+      batches = await Batch.find(query)
+      .populate("factory", "tradeName location -status -owner")
+      .select("-__v");
+    }
     return res.status(200).json({batches})
   } catch(error){
       return res.status(500).json({message : "faild to get batches"})
