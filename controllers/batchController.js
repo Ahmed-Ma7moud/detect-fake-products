@@ -123,8 +123,10 @@ exports.getBatches = async(req , res , next) => {
       query.owner = req.user.id;
     else if(req.user.role === "manufacturer"){
         query.factory = req.user.id;
-        if(!status || !['pending', 'received', 'delivered'].includes(status))
-            query.status = "pending"; // default status for manufacturer
+    }
+
+    if(status && ["pending", "received", "delivered"].includes(status)){
+      query.status = status;
     }
 
     const batches = await Batch.find(query,("-owner -__v -status"))
@@ -194,6 +196,7 @@ exports.receiveBatch = async (req, res) => {
     );
 
     batch.status = "received"; // mark batch as received
+    batch.owner = buyer; // update owner to the supplier
     await batch.save();
 
     const products = await Product.find({ batchNumber }).select("serialNumber medicineName owner");
