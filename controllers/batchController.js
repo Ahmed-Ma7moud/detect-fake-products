@@ -100,6 +100,20 @@ exports.getBatchById = async (req, res) => {
   }
 };
 
+// Get all batches for supplier
+exports.factorySupplierBatches = async (req, res) => {
+  try {
+    const { supplierId } = req.params;
+    if (!supplierId || !mongoose.Types.ObjectId.isValid(supplierId))
+      return res.status(400).json({ success: false, message: "Missing or invalid supplier ID" });
+
+    const batches = await Batch.find({ factory: req.user.id, owner: supplierId });
+    return res.status(200).json({ success: true, batches });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Failed to get batches" });
+  }
+};
+
 // Get all batches for manufacturer
 exports.getBatches = async(req , res , next) => {
   try{

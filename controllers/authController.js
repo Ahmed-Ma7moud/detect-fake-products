@@ -187,7 +187,6 @@ exports.login = async (req, res) => {
       sameSite : "none",
       maxAge: parseInt(process.env.REFRESH_TOKEN_EXP_DAYS || '30', 10) * 24 * 60 * 60 * 1000 // 30 days
     });
-    console.log("user role", user.role);
     res.status(200).json({
       success: true,
       accessToken ,
