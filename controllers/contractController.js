@@ -15,10 +15,11 @@ exports.makeContract = async (req, res, next) => {
     // check if the factory already has a contract with the supplier
     const existingContract = await Contract.findOne({
       factory: req.user.id,
-      supplier: supplierID
+      supplier: supplierID,
+      status : "accepted"
     });
     if (existingContract)
-      return res.status(400).json({ success: false, msg: `Contract with this supplier already exists with ${existingContract.status} status` });
+      return res.status(400).json({ success: false, msg: `Contract with this supplier already exists` });
 
     const newContract = new Contract({
       factory : req.user.id,
