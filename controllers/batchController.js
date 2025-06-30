@@ -1,8 +1,9 @@
 const Batch = require("../models/Batch");
 const Product = require("../models/Product");
-const Order = require("../models/Order");
+const Contract = require("../models/Contract");
 const Tracking = require("../models/Tracking");
 const { v4: uuidv4 } = require('uuid');
+const { default: mongoose } = require("mongoose");
 
 exports.addBatch = async (req, res) => {
   try {
@@ -77,12 +78,12 @@ exports.addBatch = async (req, res) => {
 exports.getBatchById = async (req, res) => {
   try {
     const batchNumber = req.params.id;
-    if (!batchNumber || !/BA\d{4}/.test(batchNumber))
-      return res.status(400).json({ message: "Invalid batch number" });
+    if (!batchNumber || !mongoose.Types.ObjectId.isValid(batchNumber))
+      return res.status(400).json({ message: "Missing or invalid batch number" });
 
     const batch = await Batch.findOne(
     {
-        batchNumber,
+        _id : batchNumber,
         $or: [
         { factory: req.user.id },
         { owner: req.user.id }
@@ -108,8 +109,8 @@ exports.getBatches = async(req , res , next) => {
       query.owner = req.user.id;
     else if(req.user.role === "manufacturer"){
         query.factory = req.user.id;
-        if(!status || !['available', 'unavailable', 'sold'].includes(status))
-            query.status = "available";
+        if(!status || !['pending', 'received', 'delivered'].includes(status))
+            query.status = "pending"; // default status for manufacturer
     }
 
     const batches = await Batch.find(query,("-owner -__v -status"))
@@ -124,10 +125,10 @@ exports.getBatches = async(req , res , next) => {
 exports.deleteBatch = async (req , res , next) => {
 try{
   const batchNumber = req.params.id;
-  if(!batchNumber || !/BA\d{4}/.test(batchNumber))
-    return res.status(400).json({message: "Invalid batch number"});
+  if(!batchNumber || !mongoose.Types.ObjectId.isValid(batchNumber))
+    return res.status(400).json({message: "Missing or invalid batch number"});
   const batch = await Batch.
-  findOneAndDelete({batchNumber , factory : req.user.id , status : "available"});
+  findOneAndDelete({_id : batchNumber , factory : req.user.id , status : "pending"});
   if(!batch)
     return res.status(404).json({message: "Batch not found or can not be deleted this batch"});
 
@@ -144,20 +145,27 @@ try{
 exports.receiveBatch = async (req, res) => {
   try {
     const batchNumber = req.params.batch;
-    if(!batchNumber || !/BA\d{4}/.test(batchNumber)) {
-      return res.status(400).json({ success: false, msg: "Invalid batch number format" });
+    if(!batchNumber || !mongoose.Types.ObjectId.isValid(batchNumber)) {
+      return res.status(400).json({ success: false, msg: "Missing or invalid batch number format" });
     }
     // check if batch exists
-    const batch = await Batch.findOne({ batchNumber });
+    const batch = await Batch.findById(batchNumber);
     if (!batch) {
-      return res.status(400).json({ message: "Invalid batch number" });
+      return res.status(400).json({ message: "batch is not exist" });
     }
 
-    // check if supplier has an order to receive this batch
-    const order = await Order.findOne({ supplier: req.user.id, batchNumber, status: 'accepted' });
-    if (!order) {
-      return res.status(400).json({ success: false, msg: "No order found for this batch" });
+    // check if the batch is already received
+    if (batch.status !== "pending") {
+      return res.status(400).json({ message: `Cannot receive this ${batch.status} batch` });
     }
+    // check if the supplier has a contract with the manufacturer
+    const contract = await Contract.findOne({
+      supplier: req.user.id,
+      manufacturer: batch.factory
+    });
+
+    if (!contract)
+      return res.status(400).json({ message: "No contract found between supplier and manufacturer" });
 
     const seller = batch.factory;
     const buyer = req.user.id;
@@ -171,7 +179,7 @@ exports.receiveBatch = async (req, res) => {
       { $set: { owner: buyer, location: req.user.location } }
     );
 
-    batch.status = "sold"; // mark batch as sold
+    batch.status = "received"; // mark batch as received
     await batch.save();
 
     const products = await Product.find({ batchNumber }).select("serialNumber medicineName owner");

@@ -45,8 +45,8 @@ const batchSchema = new mongoose.Schema({
     },
     status : {
         type : String,
-        enum : ['available', 'unavailable' , 'sold'],
-        default : 'available'
+        enum : ['pending', 'received', 'delivered'],
+        default : 'pending'
     }
 },{
   versionKey: false
