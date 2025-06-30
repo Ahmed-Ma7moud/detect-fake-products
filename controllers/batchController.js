@@ -4,6 +4,7 @@ const Contract = require("../models/Contract");
 const Tracking = require("../models/Tracking");
 const { v4: uuidv4 } = require('uuid');
 const { default: mongoose } = require("mongoose");
+const { decodeBytes32String } = require("ethers");
 
 exports.addBatch = async (req, res) => {
   try {
@@ -107,8 +108,27 @@ exports.factorySupplierBatches = async (req, res) => {
     if (!supplierId || !mongoose.Types.ObjectId.isValid(supplierId))
       return res.status(400).json({ success: false, message: "Missing or invalid supplier ID" });
 
-    const batches = await Batch.find({ factory: req.user.id, owner: supplierId });
-    return res.status(200).json({ success: true, batches });
+    // Check if the factory has a contract with the supplier
+    const contract = await Contract.findOne({
+      factory: req.user.id,
+      supplier: supplierId,
+      status: 'accepted'
+    });
+    if (!contract)
+      return res.status(400).json({ success: false, message: "No contract found between factory and supplier" });
+
+    // Get all batches for the supplier
+    const batches = await Batch.find({ factory: req.user.id, owner: supplierId })
+    .populate("owner", "tradeName location email")
+    .select("-__v -status");
+
+    return res.status(200).json({
+       success: true, 
+       batches, 
+       contractDate: 
+       contract.contractDate, 
+       description: contract.description 
+      });
   } catch (error) {
     return res.status(500).json({ success: false, message: "Failed to get batches" });
   }
@@ -117,29 +137,17 @@ exports.factorySupplierBatches = async (req, res) => {
 // Get all batches for manufacturer
 exports.getBatches = async(req , res , next) => {
   try{
-    let {status} = req.query;
-    let query = {};
     let batches;
-    if(req.user.role === "supplier")
-      query.owner = req.user.id;
-    else if(req.user.role === "manufacturer"){
-        query.factory = req.user.id;
+    if(req.user.role === "manufacturer"){
+      batches = await Batch.find({ factory: req.user.id })
+        .populate("owner", "tradeName location")
+        .select("-__v");
+    }else if(req.user.role === "supplier"){
+      batches = await Batch.find({ owner: req.user.id })
+        .populate("factory", "tradeName location")
+        .select("-__v -status");
     }
 
-    if(status && ["pending", "received", "delivered"].includes(status)){
-      query.status = status;
-    }
-
-    if(req.user.role === "supplier"){
-      batches = await Batch.find(query)
-      .populate("factory", "tradeName location")
-      .select("-__v");
-    }
-    else if(req.user.role === "manufacturer"){
-      batches = await Batch.find(query)
-      .populate("factory", "tradeName location -status -owner")
-      .select("-__v");
-    }
     return res.status(200).json({batches})
   } catch(error){
       return res.status(500).json({message : "faild to get batches"})
