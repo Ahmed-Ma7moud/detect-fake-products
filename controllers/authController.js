@@ -86,7 +86,7 @@ exports.login = async (req, res) => {
     
     // Find user and select password field
     const user = await User.findOne({ email });
-    console.log("user found", user);
+    
     // Check if user exists
     if (!user) {
       return res.status(401).json({
@@ -187,9 +187,11 @@ exports.login = async (req, res) => {
       sameSite : "none",
       maxAge: parseInt(process.env.REFRESH_TOKEN_EXP_DAYS || '30', 10) * 24 * 60 * 60 * 1000 // 30 days
     });
+    console.log("user role", user.role);
     res.status(200).json({
       success: true,
       accessToken ,
+      role: user.role
     });
   } catch (error) {
     console.log(error)
