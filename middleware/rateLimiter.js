@@ -47,14 +47,14 @@ const apiLimiter = rateLimit({
 // login limiter
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 5,
+  max: 100,
   message: 'Too many login attempts, please try again later'
 });
 
 //for auth like register resent password
 const authLimiter = rateLimit({
   windowMs: 10 * 60 * 1000, // 10 minutes
-  max: 15,
+  max: 150,
   message: 'Too many login attempts, please try again later'
 });
 
@@ -62,7 +62,7 @@ const authLimiter = rateLimit({
 // Public API rate limiter (less strict)
 const publicLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 300, // More generous limit for public APIs
+  max: 500, // More generous limit for public APIs
   standardHeaders: true
 });
 

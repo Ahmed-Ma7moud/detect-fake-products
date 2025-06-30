@@ -10,7 +10,7 @@ const {session} = require('./middleware/auth')
 const app = express();
 
 // trust proxy
-// app.set('trust proxy', true);
+app.set('trust proxy', true);
 
 // Connect to MongoDB
 connectDB();
@@ -52,7 +52,6 @@ app.use((req, res, next) => {
 
 
 const PORT = parseInt(process.env.PORT,10) || 3000;
-
-app.listen(PORT , () => {
+app.listen(PORT  , () => {
   console.log(`Server running on port ${PORT}`);
 });

@@ -4,11 +4,22 @@ const mongoose = require('mongoose');
 exports.makeContract = async (req, res, next) => {
   try {
     const { supplierID, description } = req.body;
+    if(!supplierID || !description)
+      return res.status(400).json({ success: false, msg: "Missing supplier ID or description" });
+    
     const checkSupplier = await User.
     findOne({ _id: supplierID , role: 'supplier' });
     if (!checkSupplier)
       return res.status(400).json({ success: false, msg: "Invalid supplier address" });
    
+    // check if the factory already has a contract with the supplier
+    const existingContract = await Contract.findOne({
+      factory: req.user.id,
+      supplier: supplierID
+    });
+    if (existingContract)
+      return res.status(400).json({ success: false, msg: `Contract with this supplier already exists with ${existingContract.status} status` });
+
     const newContract = new Contract({
       factory : req.user.id,
       supplier : supplierID,
@@ -38,6 +49,17 @@ exports.getContracts = async (req, res, next) => {
     }
 
     res.status(200).json({ success: true, contracts });
+  } catch (err) {
+    res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
+  }
+};
+
+// get all suppliers
+exports.getAllSuppliers = async (req, res, next) => {
+  try {
+    const suppliers = await User.find({ role: 'supplier' })
+      .select('firstName lastName location email');
+    res.status(200).json({ success: true, suppliers });
   } catch (err) {
     res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
   }

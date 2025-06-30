@@ -190,7 +190,8 @@ exports.login = async (req, res) => {
     
     res.status(200).json({
       success: true,
-      accessToken
+      accessToken ,
+      role: user.role
     });
   } catch (error) {
     console.log(error)

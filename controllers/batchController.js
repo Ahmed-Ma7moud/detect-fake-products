@@ -27,7 +27,7 @@ exports.addBatch = async (req, res) => {
       serialNumbers.push(serialNumber);
       products.push({
         factory : req.user.id,
-        medicineName,
+        medicineName, 
         genericName,
         price,
         serialNumber,
