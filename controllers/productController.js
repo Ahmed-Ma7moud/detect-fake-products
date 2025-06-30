@@ -104,10 +104,9 @@ exports.buyProduct = async (req, res) => {
       return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
 
     await Tracking.create({
-      seller,
-      buyer,
-      serialNumber,
-      productName: product.name
+      serialNumber: product.serialNumber,
+      medicineName: product.medicineName,
+      owner: buyer,
     });
 
     await Product.updateOne(
