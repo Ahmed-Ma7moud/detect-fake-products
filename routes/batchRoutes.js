@@ -18,5 +18,5 @@ router.get('/' , authorize("manufacturer" , "supplier") , getBatches)
 router.get('/orders/:supplierId' , authorize("manufacturer") , factorySupplierBatches)
 router.get('/:id' , authorize("manufacturer" , "supplier") , getBatchById)
 router.delete('/:id' , authorize("manufacturer") , deleteBatch)
-router.post('/receive/:id' , authorize("supplier") , receiveBatch)
+router.post('/receive/:batchId' , authorize("supplier") , receiveBatch)
 module.exports = router

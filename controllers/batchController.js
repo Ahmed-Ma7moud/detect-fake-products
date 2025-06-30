@@ -158,7 +158,7 @@ try{
 // Receive a batch by its id
 exports.receiveBatch = async (req, res) => {
   try {
-    const batchNumber = req.params.batch;
+    const batchNumber = req.params.batchId;
     if(!batchNumber || !mongoose.Types.ObjectId.isValid(batchNumber)) {
       return res.status(400).json({ success: false, msg: "Missing or invalid batch number format" });
     }
