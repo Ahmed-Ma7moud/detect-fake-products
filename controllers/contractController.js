@@ -16,10 +16,13 @@ exports.makeContract = async (req, res, next) => {
     const existingContract = await Contract.findOne({
       factory: req.user.id,
       supplier: supplierID,
-      status : "accepted"
+      status : { $in: ['accepted', 'pending'] }
     });
-    if (existingContract)
-      return res.status(400).json({ success: false, msg: `Contract with this supplier already exists` });
+    if (existingContract){
+      return res.status(400).json({
+     success: false, 
+     msg: `there is already a contract with ${existingContract.status}` });
+    }
 
     const newContract = new Contract({
       factory : req.user.id,
@@ -136,7 +139,10 @@ exports.deleteContract = async (req, res, next) => {
     }
 
     // Check if the contract belongs to the factory
-    const contract = await Contract.findOneAndDelete({_id: new mongoose.Types.ObjectId(id) , factory: req.user.id});
+    const contract = await Contract.findOneAndDelete({
+      _id: new mongoose.Types.ObjectId(id) , 
+      factory: req.user.id , 
+      status:{ $in: ['pending', 'accepted'] }});
     if (!contract)
       return res.status(404).json({ success: false, msg: "can not delete this contract" });
 

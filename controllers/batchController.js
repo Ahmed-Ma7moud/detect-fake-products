@@ -196,7 +196,8 @@ exports.receiveBatch = async (req, res) => {
     // check if the supplier has a contract with the manufacturer
     const contract = await Contract.findOne({
       supplier: req.user.id,
-      factory: batch.factory
+      factory: batch.factory,
+      status: 'accepted'
     });
 
     if (!contract)
