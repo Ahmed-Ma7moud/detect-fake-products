@@ -174,13 +174,18 @@ exports.productHistory = async (req, res) => {
 exports.getNearestLocations = async (req, res, next) => {
   let { location, limit } = req.query;
 
+  if (!location) {
+    return res.status(400).json({ success: false, msg: "Location query parameter is required" });
+  }
+  // Default limit to 10 if not provided
+  limit = limit ? Math.min(Number(limit), 30) : 10; 
   try {
     const regex = new RegExp(location, 'i'); // Case-insensitive partial match
 
     const products = await Product.find({
       location: { $regex: regex },
       sold: false
-    }).limit(Number(limit));
+    }).populate('owner', 'tradeName location').limit(Number(limit));
 
     if (!products.length) {
       return res.status(404).json({ success: false, msg: "No available products in this location" });
