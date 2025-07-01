@@ -46,7 +46,7 @@ exports.getProducts = async (req, res) => {
 
     // Fetch products and count
     const [products, total] = await Promise.all([
-      Product.find(query).skip(skip).limit(limitNum).populate('owner', 'tradeName location').select('-__v -_id'),
+      Product.find(query).skip(skip).limit(limitNum).populate('factory', 'tradeName location').select('-__v -_id'),
       Product.countDocuments(query)
     ]);
 
