@@ -107,8 +107,9 @@ exports.getBatchById = async (req, res) => {
 exports.factorySupplierBatches = async (req, res) => {
   try {
     const { supplierId } = req.params;
-    if (!supplierId || !mongoose.Types.ObjectId.isValid(supplierId))
+    if (!supplierId || !mongoose.Types.ObjectId.isValid(supplierId)) {
       return res.status(400).json({ success: false, message: "Missing or invalid supplier ID" });
+    }
 
     // Check if the factory has a contract with the supplier
     const contract = await Contract.findOne({
@@ -116,25 +117,37 @@ exports.factorySupplierBatches = async (req, res) => {
       supplier: supplierId,
       status: 'accepted'
     });
-    if (!contract)
+    if (!contract) {
       return res.status(400).json({ success: false, message: "No contract found between factory and supplier" });
+    }
 
     // Get all batches for the supplier
     const batches = await Batch.find({ factory: req.user.id, owner: supplierId })
-    .populate("owner", "tradeName location email")
-    .select("-__v -status");
+      .select("-__v");
+
+    // Get supplier info (for tradeName and location)
+    const supplier = await User.findById(supplierId).select("tradeName location email");
+    if (!supplier) {
+      return res.status(404).json({ success: false, message: "Supplier not found" });
+    }
 
     return res.status(200).json({
-       success: true, 
-       batches, 
-       contractDate: 
-       contract.contractDate, 
-       description: contract.description 
-      });
+      success: true,
+      batches,
+      supplier: {
+        tradeName: supplier.tradeName,
+        location: supplier.location,
+        email: supplier.email
+      },
+      contractDate: contract.contractDate,
+      description: contract.description
+    });
   } catch (error) {
+    console.error(error);
     return res.status(500).json({ success: false, message: "Failed to get batches" });
   }
 };
+
 
 // Get all batches for manufacturer
 exports.getBatches = async(req , res , next) => {
