@@ -35,7 +35,7 @@ exports.getProducts = async (req, res) => {
     }
 
     // Validate batchNumber format
-    if (!/^FC\d{1,}-BA\d{4}$/.test(batchNumber)) {
+    if (batchNumber && !/^FC\d{1,}-BA\d{4}$/.test(batchNumber)) {
       return res.status(400).json({ success: false, msg: "Invalid batch number format" });
     }
     query.batchNumber = batchNumber;
