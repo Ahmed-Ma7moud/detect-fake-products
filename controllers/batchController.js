@@ -179,16 +179,17 @@ try{
 // Receive a batch by its id
 exports.receiveBatch = async (req, res) => {
   try {
-    const batchNumber = req.params.batchId;
-    if(!batchNumber || !mongoose.Types.ObjectId.isValid(batchNumber)) {
+    const batchId = req.params.batchId;
+    if(!batchId || !mongoose.Types.ObjectId.isValid(batchId)) {
       return res.status(400).json({ success: false, msg: "Missing or invalid batch number format" });
     }
     // check if batch exists
-    const batch = await Batch.findById(batchNumber);
+    const batch = await Batch.findById(batchId);
     if (!batch) {
       return res.status(400).json({ message: "batch is not exist" });
     }
 
+    const batchNumber = batch.batchNumber;
     // check if the batch is already received
     if (batch.status !== "pending") {
       return res.status(400).json({ message: `Cannot receive this ${batch.status} batch` });
@@ -220,7 +221,6 @@ exports.receiveBatch = async (req, res) => {
     await batch.save();
 
     const products = await Product.find({ batchNumber }).select("serialNumber medicineName owner");
-
     await Tracking.insertMany(products);
 
     res.status(200).json({ success: true, msg: "Ownership transferred successfully" });
