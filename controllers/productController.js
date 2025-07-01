@@ -6,51 +6,48 @@ const Batch = require("../models/Batch");
 // Get available or sold products for pharmacy and supplier and manufacturer
 exports.getProducts = async (req, res) => {
   try {
-   let {
+    let {
       batchNumber,
       medicineName,
-      sold = false,
+      sold,
       page = 1,
       limit = 10
     } = req.query;
-    const maxLimit = 50; // max limit for products per page
-    
-    // validate sold
-    if(sold === "true")
-      sold = true;
-    else 
-      sold = false;
 
-    // Validate page and limit
-    if (limit > maxLimit)
-      limit = maxLimit; // max limit
-    
-    const pageNum = Math.max(1, parseInt(page));
-    const limitNum = Math.max(1, parseInt(limit));
+    const maxLimit = 30;
+    const maxPage = 100;
+
+    // Validate and parse page and limit
+    const pageNum = Math.min(maxPage, Math.max(1, parseInt(page)));
+    const limitNum = Math.min(maxLimit, Math.max(1, parseInt(limit)));
     const skip = (pageNum - 1) * limitNum;
 
-    // dynamic query
+    // Build dynamic query
     const query = {
-      owner: req.user.id,
-      sold
+      owner: req.user.id
     };
 
-    if (batchNumber) {
-      if (!/^BA\d{4}$/.test(batchNumber)) {
-        return res.status(400).json({ success: false, msg: "Invalid batch number format" });
-      }
-      query.batchNumber = batchNumber;
+    // Only add 'sold' to query if it's exactly "true" or "false"
+    if (sold === "true") {
+      query.sold = true;
+    } else if (sold === "false") {
+      query.sold = false;
     }
 
+    // Validate batchNumber format
+    if (!/^FC\d{1,}-BA\d{4}$/.test(batchNumber)) {
+      return res.status(400).json({ success: false, msg: "Invalid batch number format" });
+    }
+    query.batchNumber = batchNumber;
+
+    // Case-insensitive medicine name search
     if (medicineName) {
-      query.medicineName = { $regex: new RegExp(medicineName, 'i') }; // case-insensitive search
+      query.medicineName = { $regex: new RegExp(medicineName, 'i') };
     }
 
-    // Fetch products
+    // Fetch products and count
     const [products, total] = await Promise.all([
-      Product.find(query)
-        .skip(skip)
-        .limit(limitNum),
+      Product.find(query).skip(skip).limit(limitNum).populate('owner', 'tradeName location').select('-__v -_id'),
       Product.countDocuments(query)
     ]);
 
@@ -68,6 +65,7 @@ exports.getProducts = async (req, res) => {
     res.status(500).json({ success: false, msg: 'Server Error' });
   }
 };
+
 
 // Get a single product by serial number for any user
 exports.getProduct = async (req, res) => {
@@ -167,7 +165,7 @@ exports.productHistory = async (req, res) => {
       json({ success: false, msg: "No history found for this serial number" });
     }
 
-    res.status(200).json({ success: true, sold : true , history: trackingDocs });
+    res.status(200).json({ success: true, history: trackingDocs });
   } catch (err) {
     res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
   }

@@ -33,8 +33,8 @@ exports.authenticate = async (req, res, next) => {
     // Verify token
     const decoded = await jwt.verify(token, process.env.JWT_SECRET);
     // Check if user still exists
-    const user = await User.findById(decoded.id);
-    
+    const user = await User.findById(decoded.id).select('-__v -password');
+
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -59,7 +59,7 @@ exports.authenticate = async (req, res, next) => {
     }
     
     // Add user to request object
-    req.user = decoded;
+    req.user = user;
     next();
   } catch (error) {
     if (error.name === 'JsonWebTokenError') {

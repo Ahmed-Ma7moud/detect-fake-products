@@ -227,3 +227,39 @@ exports.receiveBatch = async (req, res) => {
     res.status(500).json({ success: false, msg: err.message });
   }
 };
+
+// Change batch status to delivered if all products are sold
+exports.deliverBatch = async (req, res) => {
+  try {
+    const batchNumber = req.params.batchId;
+    if (!batchNumber || !mongoose.Types.ObjectId.isValid(batchNumber)) {
+      return res.status(400).json({ success: false, msg: "Missing or invalid batch number format" });
+    }
+
+    const batch = await Batch.findById(batchNumber);
+    if (!batch) {
+      return res.status(404).json({ success: false, msg: "Batch not found" });
+    }
+
+    // if all products in the batch are sold, change the status to delivered
+    const allSold = batch.products.every(product => product.sold);
+
+    if (!allSold) {
+      return res.status(400).json({
+         success: false, 
+         msg: "Not all products are sold yet" 
+        });
+    } 
+    if (batch.status === "delivered") {
+      return res.status(200).json({ success: true, msg: "Batch is already delivered" });
+    }
+    
+    batch.status = "delivered"; // change status to delivered
+    await batch.save();
+    
+    res.status(200).json({ success: true, msg: "Batch delivered successfully" });
+
+  } catch (err) {
+    res.status(500).json({ success: false, msg: err.message });
+  }
+};

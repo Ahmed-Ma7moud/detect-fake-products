@@ -6,7 +6,8 @@ const {
     getBatches,
     deleteBatch,
     receiveBatch,
-    factorySupplierBatches
+    factorySupplierBatches,
+    deliverBatch
 } = require("../controllers/batchController")
 
 const {authenticate , authorize} = require("../middleware/auth")
@@ -19,4 +20,5 @@ router.get('/orders/:supplierId' , authorize("manufacturer") , factorySupplierBa
 router.get('/:id' , authorize("manufacturer" , "supplier") , getBatchById)
 router.delete('/:id' , authorize("manufacturer") , deleteBatch)
 router.post('/receive/:batchId' , authorize("supplier") , receiveBatch)
+router.put('/deliver/:batchId' , authorize("supplier") , deliverBatch)
 module.exports = router
