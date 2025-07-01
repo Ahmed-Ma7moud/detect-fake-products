@@ -160,7 +160,7 @@ exports.getBatches = async(req , res , next) => {
     }else if(req.user.role === "supplier"){
       batches = await Batch.find({ owner: req.user.id })
         .populate("factory", "tradeName location")
-        .select("-__v -status");
+        .select("-__v");
     }
 
     return res.status(200).json({batches})
