@@ -813,7 +813,7 @@ exports.resendVerificationEmail = async (req, res) => {
 exports.getUserProfile = async (req, res) => {
   try {
     const user = await User.findById(req.user.id)
-      .select('firstName lastName email  location tradeName  wallet_address _id picture');
+      .select('firstName lastName email  location tradeName  wallet_address _id picture role');
 
     res.status(200).json({
       success: true,
