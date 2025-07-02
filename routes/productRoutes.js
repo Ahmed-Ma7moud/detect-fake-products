@@ -16,7 +16,7 @@ router.use(rateLimiter.apiLimiter)
 
 // public routes
 router.get("/history/:id" , productHistory)
-router.get("/nearest" , getNearestLocations)
+router.get("/nearest/:name" , getNearestLocations)
 router.get("/:id" , getProduct); 
 
 // restricted routes

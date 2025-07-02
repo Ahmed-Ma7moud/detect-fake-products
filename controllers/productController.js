@@ -172,23 +172,59 @@ exports.productHistory = async (req, res) => {
 
 // Get nearest locations based on partial match of location name
 exports.getNearestLocations = async (req, res, next) => {
-  let { location, limit } = req.query;
+  let name = req.params.name;
 
-  if (!location) {
-    return res.status(400).json({ success: false, msg: "Location query parameter is required" });
+  if (!name) {
+    return res.status(400).json({ success: false, msg: "generic name or medicine name is required" });
   }
-  // Default limit to 10 if not provided
-  limit = limit ? Math.min(Number(limit), 30) : 10; 
+  // Default limit to 20
+  let limit = 20;
   try {
-    const regex = new RegExp(location, 'i'); // Case-insensitive partial match
-
-    const products = await Product.find({
-      location: { $regex: regex },
-      sold: false
-    }).populate('owner', 'tradeName location').limit(Number(limit));
+    const regex = new RegExp(name, 'i'); // Case-insensitive partial match
+    const products = await Product.aggregate([
+      {
+        $match: {
+          $or: [
+            { medicineName: { $regex: regex } },
+            { genericName: { $regex: regex } }
+          ],
+          sold: false
+        }
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'owner',
+          foreignField: '_id',
+          as: 'owner'
+        }
+      },
+      { $unwind: '$owner' },
+      {
+        $group: {
+          _id: { tradeName: '$owner.tradeName', location: '$owner.location' },
+          medicineName: { $first: '$medicineName' },
+          genericName: { $first: '$genericName' },
+          tradeName: { $first: '$owner.tradeName' },
+          location: { $first: '$owner.location' },
+          price: { $first: '$price' }
+        }
+      },
+      {
+        $project: {
+          _id: 0, 
+          medicineName: 1,
+          genericName: 1,
+          tradeName: 1,
+          location: 1,
+          price: 1
+        }
+      },
+      { $limit: Number(limit) }
+    ]);
 
     if (!products.length) {
-      return res.status(404).json({ success: false, msg: "No available products in this location" });
+      return res.status(404).json({ success: false, msg: "No available products found" });
     }
 
     res.status(200).json({ success: true, products });
