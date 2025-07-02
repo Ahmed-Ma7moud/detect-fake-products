@@ -201,6 +201,11 @@ exports.getNearestLocations = async (req, res, next) => {
       },
       { $unwind: '$owner' },
       {
+        $match: {
+          'owner.role': 'pharmacy'
+        }
+      },
+      {
         $group: {
           _id: { tradeName: '$owner.tradeName', location: '$owner.location' },
           medicineName: { $first: '$medicineName' },
@@ -222,7 +227,6 @@ exports.getNearestLocations = async (req, res, next) => {
       },
       { $limit: Number(limit) }
     ]);
-
     if (!products.length) {
       return res.status(404).json({ success: false, msg: "No available products found" });
     }
