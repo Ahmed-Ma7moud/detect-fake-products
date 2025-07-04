@@ -160,7 +160,7 @@ exports.productHistory = async (req, res) => {
     .select("-__v -_id");
 
     if (!trackingDocs) {
-      return res.status(404).
+      return res.status(400).
       json({ success: false, msg: "No history found for this serial number" });
     }
 
@@ -207,7 +207,13 @@ exports.getNearestLocations = async (req, res, next) => {
       },
       {
         $group: {
-          _id: { tradeName: '$owner.tradeName', location: '$owner.location' },
+          _id: {
+            medicineName: '$medicineName',
+            genericName: '$genericName',
+            tradeName: '$owner.tradeName',
+            location: '$owner.location',
+            price: '$price'
+          },
           medicineName: { $first: '$medicineName' },
           genericName: { $first: '$genericName' },
           tradeName: { $first: '$owner.tradeName' },
@@ -228,7 +234,7 @@ exports.getNearestLocations = async (req, res, next) => {
       { $limit: Number(limit) }
     ]);
     if (!products.length) {
-      return res.status(404).json({ success: false, msg: "No available products found" });
+      return res.status(400).json({ success: false, msg: "No available products found" });
     }
 
     res.status(200).json({ success: true, products });

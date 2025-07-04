@@ -178,7 +178,7 @@ try{
   const batch = await Batch.
   findOneAndDelete({_id : batchNumber , factory : req.user.id , status : "pending"});
   if(!batch)
-    return res.status(404).json({message: "Batch not found or can not be deleted this batch"});
+    return res.status(400).json({message: "Batch not found or can not be deleted this batch"});
 
   //Delete all products in this batch
   await Product.deleteMany({batchNumber});
