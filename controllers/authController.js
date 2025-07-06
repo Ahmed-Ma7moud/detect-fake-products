@@ -181,7 +181,7 @@ exports.login = async (req, res) => {
     }
     
     // invalid all access token of this user
-    user.accessTokenVersion+=1;
+    // user.accessTokenVersion+=1;
 
     // Generate tokens
     const accessToken = user.generateAccessToken();
