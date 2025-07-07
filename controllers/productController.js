@@ -154,6 +154,10 @@ exports.productHistory = async (req, res) => {
     if (!serialNumber)
       return res.status(400).json({ success: false, msg: "Invalid serial number" });
 
+    const product = await Product.findOne({ serialNumber });
+    if (!product)
+      return res.status(404).json({ success: false, msg: "Product not found" });
+
     const trackingDocs = await Tracking.
     find({ serialNumber })
     .populate("owner" , "tradeName role location")
@@ -164,7 +168,7 @@ exports.productHistory = async (req, res) => {
       json({ success: false, msg: "No history found for this serial number" });
     }
 
-    res.status(200).json({ success: true, history: trackingDocs });
+    res.status(200).json({ success: true, sold : product.sold , history: trackingDocs });
   } catch (err) {
     res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
   }
