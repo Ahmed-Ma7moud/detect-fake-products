@@ -5,7 +5,7 @@ const User = require("../models/User");
 const Tracking = require("../models/Tracking");
 const { v4: uuidv4 } = require('uuid');
 const { default: mongoose } = require("mongoose");
-
+const {smartContract , web3} = require("../config/blockchain");
 exports.addBatch = async (req, res) => {
   try {
     const { medicineName, genericName, price, quantity, productionDate, expirationDate } = req.body;
@@ -41,6 +41,25 @@ exports.addBatch = async (req, res) => {
         productionDate,
         expirationDate
       });
+    }
+    
+    // add batch to the blockchain
+    const serialNumbersArray = serialNumbers.map(product => product.serialNumber);
+    try {
+      for (let i = 0; i < serialNumbersArray.length; i++) {
+        const {transactionHash , blockNumber} = await smartContract.methods.registerProduct(
+          req.user.wallet_address, 
+          req.user.location,
+          serialNumbersArray[i],
+          batchNumber,
+          medicineName,
+          req.user.tradeName
+        ).send({ from: web3.eth.defaultAccount, gas: 2000000 });
+        products[i].transactionHash = transactionHash;
+        products[i].blockNumber = parseInt(blockNumber.toString());
+      }
+    } catch (error) {
+      console.log("Blockchain error at registerProduct:", error);
     }
 
     // any Manufacturer can see his batches and serial numbers
@@ -221,6 +240,22 @@ exports.receiveBatch = async (req, res) => {
     const buyer = req.user.id;
     if (seller.toString() === buyer.toString()) {
       return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
+    }
+
+    // execute the transfer on the blockchain
+    const serialNumbers = batch.products.map(product => product.serialNumber);
+    try {
+      for (let i = 0; i < serialNumbers.length; i++) {
+        await smartContract.methods.transferOwnership(
+          req.user.wallet_address, 
+          req.user.location,
+          serialNumbers[i],
+          req.user.tradeName,
+          req.user.role
+        ).send({ from: web3.eth.defaultAccount, gas: 2000000 });
+      }
+    } catch (error) {
+      console.log("Blockchain error at transferOwnership:", error);
     }
 
     // update owner and location

@@ -1,7 +1,7 @@
 const Product = require('../models/Product');
 const Tracking = require("../models/Tracking");
 const Batch = require("../models/Batch");
-
+const { smartContract, web3 } = require("../config/blockchain");
 
 // Get available or sold products for pharmacy and supplier and manufacturer
 exports.getProducts = async (req, res) => {
@@ -100,6 +100,19 @@ exports.buyProduct = async (req, res) => {
     if (seller.toString() === buyer.toString())
       return res.status(400).json({ success: false, msg: "Cannot transfer to yourself" });
 
+    // execute the transfer on the blockchain
+    try {
+        await smartContract.methods.transferOwnership(
+          req.user.wallet_address, 
+          req.user.location,
+          serialNumber,
+          req.user.tradeName,
+          req.user.role
+        ).send({ from: web3.eth.defaultAccount, gas: 2000000 });
+    } catch (error) {
+      console.log("Blockchain error at transferOwnership:", error);
+    }
+    
     await Tracking.create({
       serialNumber: product.serialNumber,
       medicineName: product.medicineName,
@@ -136,6 +149,19 @@ exports.sellProduct = async (req, res) => {
     if (!product)
       return res.status(404).json({ success: false, msg: "Product not found" });
 
+    // execute the transfer on the blockchain
+    try {
+        await smartContract.methods.transferOwnership(
+          "0x9B50894517966505838e53C84AfC08aC24E20c4f", 
+          "user location",
+          serialNumber,
+          "nothing", 
+          "patient"
+        ).send({ from: web3.eth.defaultAccount, gas: 2000000 });
+    } catch (error) {
+      console.log("Blockchain error at transferOwnership:", error);
+    }
+
     await Product.updateOne(
       { serialNumber },
       { sold: true }
@@ -168,7 +194,7 @@ exports.productHistory = async (req, res) => {
       json({ success: false, msg: "No history found for this serial number" });
     }
 
-    res.status(200).json({ success: true, sold : product.sold , history: trackingDocs });
+    res.status(200).json({ success: true, sold: product.sold, history: trackingDocs });
   } catch (err) {
     res.status(500).json({ success: false, msg: `Server error: ${err.message}` });
   }

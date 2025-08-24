@@ -41,6 +41,14 @@ const ProductSchema = new mongoose.Schema({
     type : Boolean,
     default:false
   },
+  transactionHash: {
+    type: String,
+    default: null
+  },
+  blockNumber: {
+    type: Number,
+    default: null
+  },
   productionDate: {
     type: Date,
     default: () => {

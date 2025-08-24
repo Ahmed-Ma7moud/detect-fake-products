@@ -50,8 +50,7 @@ app.use((req, res, next) => {
   res.status(404).json({success : false , msg :'Sorry, the requested resource was not found.'});
 });
 
-
 const PORT = parseInt(process.env.PORT,10) || 3000;
-app.listen(PORT  , () => {
+app.listen(PORT  ,() => {
   console.log(`Server running on port ${PORT}`);
 });

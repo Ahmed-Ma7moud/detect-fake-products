@@ -4,3 +4,7 @@ notes.txt
 build
 throwError.js
 comments
+migrations
+truffle-config.js
+contracts
+config/blockchain.js
